@@ -3,7 +3,7 @@ import {
   Award, Briefcase, TrendingUp, Clock, FileCheck,
   CheckCircle2, XCircle, AlertTriangle, BadgeCheck,
   GraduationCap, MapPin, IndianRupee, Calendar, Edit3,
-  User, ShieldCheck, History, Share2,
+  User, ShieldCheck, History, Share2, Building2,
 } from 'lucide-react';
 import { Card, SectionTitle, Badge, EvidenceBadge, ProgressBar } from '@/components/ui';
 import { KPICard } from '@/components/ui/KPICard';
@@ -169,6 +169,49 @@ export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string;
           ))}
         </div>
       </Card>
+
+      {/* My Current Outcome (self-reported) */}
+      {outcomeUpdate && (
+        <Card className="border-l-4 border-l-brand-400 p-5">
+          <SectionTitle title="My Self-Reported Outcome" subtitle={`Submitted on ${outcomeUpdate.submittedAt}`} icon={<CheckCircle2 className="h-5 w-5" />} />
+          <div className="mb-3">
+            <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
+              outcomeUpdate.employmentStatus === 'Placed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+              : outcomeUpdate.employmentStatus === 'Self-Employed' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+              : outcomeUpdate.employmentStatus === 'Apprenticeship' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
+              : outcomeUpdate.employmentStatus === 'Higher Education' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+              : outcomeUpdate.employmentStatus === 'Further Training' ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300'
+              : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
+            }`}>
+              {outcomeUpdate.employmentStatus}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {outcomeUpdate.jobTitle && <DetailRow label="Job Title" value={outcomeUpdate.jobTitle} icon={<Briefcase className="h-4 w-4" />} />}
+            {outcomeUpdate.employer && <DetailRow label="Employer" value={outcomeUpdate.employer} icon={<Building2 className="h-4 w-4" />} />}
+            {outcomeUpdate.employmentType && <DetailRow label="Employment Type" value={outcomeUpdate.employmentType} />}
+            {outcomeUpdate.joiningDate && <DetailRow label="Joining Date" value={outcomeUpdate.joiningDate} icon={<Calendar className="h-4 w-4" />} />}
+            {outcomeUpdate.jobLocation && <DetailRow label="Location" value={outcomeUpdate.jobLocation} icon={<MapPin className="h-4 w-4" />} />}
+            {outcomeUpdate.salaryRange && <DetailRow label="Salary Range" value={outcomeUpdate.salaryRange} icon={<IndianRupee className="h-4 w-4" />} />}
+            {outcomeUpdate.businessType && <DetailRow label="Business Type" value={outcomeUpdate.businessType} icon={<Briefcase className="h-4 w-4" />} />}
+            {outcomeUpdate.startDate && <DetailRow label="Start Date" value={outcomeUpdate.startDate} icon={<Calendar className="h-4 w-4" />} />}
+            {outcomeUpdate.incomeRange && <DetailRow label="Income Range" value={outcomeUpdate.incomeRange} icon={<IndianRupee className="h-4 w-4" />} />}
+            {outcomeUpdate.organization && <DetailRow label="Organization" value={outcomeUpdate.organization} icon={<Building2 className="h-4 w-4" />} />}
+            {outcomeUpdate.role && <DetailRow label="Role" value={outcomeUpdate.role} icon={<Briefcase className="h-4 w-4" />} />}
+            {outcomeUpdate.stipend && <DetailRow label="Stipend" value={outcomeUpdate.stipend} icon={<IndianRupee className="h-4 w-4" />} />}
+            {outcomeUpdate.apprenticeshipStatus && <DetailRow label="Apprenticeship Status" value={outcomeUpdate.apprenticeshipStatus} />}
+            {outcomeUpdate.courseName && <DetailRow label="Programme" value={outcomeUpdate.courseName} icon={<GraduationCap className="h-4 w-4" />} />}
+            {outcomeUpdate.institutionName && <DetailRow label="Institution" value={outcomeUpdate.institutionName} icon={<Building2 className="h-4 w-4" />} />}
+            {outcomeUpdate.location && <DetailRow label="Location" value={outcomeUpdate.location} icon={<MapPin className="h-4 w-4" />} />}
+            {outcomeUpdate.jobRelevance && (
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Training Relevance</span>
+                <Badge color={outcomeUpdate.jobRelevance === 'High' ? 'emerald' : outcomeUpdate.jobRelevance === 'Moderate' ? 'amber' : 'rose'} size="sm">{outcomeUpdate.jobRelevance}</Badge>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Employment Status & Relevant Employment */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

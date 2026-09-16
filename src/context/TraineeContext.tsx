@@ -1,14 +1,44 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { trainees, type Trainee, type FollowUp } from '@/data/mockData';
 
+export type OutcomeStatus =
+  | 'Placed'
+  | 'Self-Employed'
+  | 'Apprenticeship'
+  | 'Higher Education'
+  | 'Further Training'
+  | 'Looking for Work'
+  | 'Not Currently Working';
+
 export interface OutcomeUpdate {
-  employmentStatus: 'Placed' | 'Self-Employed' | 'Apprenticeship' | 'Unplaced';
-  jobRole: string;
-  industry: string;
-  joiningDate: string;
-  salaryRange: string;
-  jobLocation: string;
-  jobRelevance: 'High' | 'Moderate' | 'Low';
+  employmentStatus: OutcomeStatus;
+  // Employment fields
+  jobTitle?: string;
+  employer?: string;
+  joiningDate?: string;
+  jobLocation?: string;
+  employmentType?: 'Full-time' | 'Part-time' | 'Contract' | 'Temporary' | '';
+  salaryRange?: string;
+  // Self-employment fields
+  businessType?: string;
+  startDate?: string;
+  incomeRange?: string;
+  // Apprenticeship fields
+  organization?: string;
+  role?: string;
+  stipend?: string;
+  apprenticeshipStatus?: 'Ongoing' | 'Completed' | 'Discontinued' | '';
+  // Higher education / Further training fields
+  courseName?: string;
+  institutionName?: string;
+  // Shared
+  location?: string;
+  jobRelevance?: 'High' | 'Moderate' | 'Low';
+  // Legacy compatibility (used by FollowUpTimeline)
+  jobRole?: string;
+  industry?: string;
+  salaryRangeLegacy?: string;
+  jobLocationLegacy?: string;
 }
 
 export interface OutcomeUpdateRecord extends OutcomeUpdate {
@@ -27,6 +57,19 @@ interface TraineeContextValue {
 
 const TraineeContext = createContext<TraineeContextValue | null>(null);
 
+function isEmployedType(status: OutcomeStatus): boolean {
+  return status === 'Placed' || status === 'Self-Employed' || status === 'Apprenticeship';
+}
+
+function mapStatusToTrainee(status: OutcomeStatus): Trainee['employmentStatus'] {
+  switch (status) {
+    case 'Placed': return 'Placed';
+    case 'Self-Employed': return 'Self-Employed';
+    case 'Apprenticeship': return 'Apprenticeship';
+    default: return 'Unplaced';
+  }
+}
+
 export function TraineeProvider({ traineeId, children }: { traineeId: string; children: ReactNode }) {
   const baseTrainee = trainees.find((t) => t.id === traineeId) || trainees[0];
   const [outcomeUpdate, setOutcomeUpdate] = useState<OutcomeUpdateRecord | null>(null);
@@ -35,13 +78,25 @@ export function TraineeProvider({ traineeId, children }: { traineeId: string; ch
   const mergedTrainee: Trainee = outcomeUpdate
     ? {
         ...baseTrainee,
-        employmentStatus: outcomeUpdate.employmentStatus,
-        jobRole: outcomeUpdate.employmentStatus === 'Unplaced' ? null : outcomeUpdate.jobRole || null,
-        industry: outcomeUpdate.employmentStatus === 'Unplaced' ? null : outcomeUpdate.industry || null,
-        jobLocation: outcomeUpdate.employmentStatus === 'Unplaced' ? null : outcomeUpdate.jobLocation || null,
-        joiningDate: outcomeUpdate.employmentStatus === 'Unplaced' ? null : outcomeUpdate.joiningDate || null,
-        salaryRange: outcomeUpdate.employmentStatus === 'Unplaced' ? null : outcomeUpdate.salaryRange || null,
-        jobRelevance: outcomeUpdate.employmentStatus === 'Unplaced' ? null : outcomeUpdate.jobRelevance,
+        employmentStatus: mapStatusToTrainee(outcomeUpdate.employmentStatus),
+        jobRole: isEmployedType(outcomeUpdate.employmentStatus)
+          ? (outcomeUpdate.jobTitle || outcomeUpdate.businessType || outcomeUpdate.role || null)
+          : null,
+        industry: isEmployedType(outcomeUpdate.employmentStatus)
+          ? (outcomeUpdate.employer || outcomeUpdate.organization || outcomeUpdate.institutionName || null)
+          : null,
+        jobLocation: isEmployedType(outcomeUpdate.employmentStatus)
+          ? (outcomeUpdate.jobLocation || outcomeUpdate.location || null)
+          : null,
+        joiningDate: isEmployedType(outcomeUpdate.employmentStatus)
+          ? (outcomeUpdate.joiningDate || outcomeUpdate.startDate || null)
+          : null,
+        salaryRange: isEmployedType(outcomeUpdate.employmentStatus)
+          ? (outcomeUpdate.salaryRange || outcomeUpdate.incomeRange || outcomeUpdate.stipend || null)
+          : null,
+        jobRelevance: isEmployedType(outcomeUpdate.employmentStatus)
+          ? (outcomeUpdate.jobRelevance || null)
+          : null,
         evidence: 'Self-Reported',
       }
     : baseTrainee;
@@ -49,15 +104,15 @@ export function TraineeProvider({ traineeId, children }: { traineeId: string; ch
   const followUps: FollowUp[] = baseTrainee.followUps.map((f) => {
     const update = followUpUpdates[f.period];
     if (!update) return f;
-    const isUnplaced = update.employmentStatus === 'Unplaced';
+    const employed = isEmployedType(update.employmentStatus);
     return {
       ...f,
       responded: true,
-      employed: !isUnplaced,
+      employed,
       salary: null,
-      relevant: !isUnplaced && (update.jobRelevance === 'High' || update.jobRelevance === 'Moderate'),
-      retained: !isUnplaced && f.days >= 180,
-      livelihoodStatus: isUnplaced ? 'Seeking Work' : update.jobRelevance === 'High' ? 'Relevant Employment' : 'Employed (Low Relevance)',
+      relevant: employed && (update.jobRelevance === 'High' || update.jobRelevance === 'Moderate'),
+      retained: employed && f.days >= 180,
+      livelihoodStatus: employed ? (update.jobRelevance === 'High' ? 'Relevant Employment' : 'Employed (Low Relevance)') : 'Seeking Work',
       evidence: 'Self-Reported' as const,
     };
   });
