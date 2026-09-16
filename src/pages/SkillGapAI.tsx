@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import {
   BrainCircuit, AlertTriangle, TrendingUp, Lightbulb,
   CheckCircle2, XCircle, Sparkles, BookOpen, Info,
-  Target, Zap, ChevronRight, Award, Clock,
+  Target, Zap, ChevronRight, Award, Clock, Briefcase,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
