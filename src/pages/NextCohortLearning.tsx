@@ -1,13 +1,96 @@
 import {
   GraduationCap, TrendingUp, ArrowRight, Info,
-  AlertTriangle, CheckCircle2,
+  AlertTriangle, CheckCircle2, BookOpen, Briefcase,
+  Users, ShieldCheck, Lightbulb,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, LabelList,
 } from 'recharts';
 import { Card, SectionTitle, Badge, ProgressBar } from '@/components/ui';
-import { cohortComparisons } from '@/data/mockData';
+import { cohortComparisons, skillGapData, skillsVsDemand, employmentRetentionTrend } from '@/data/mockData';
+
+interface NextBatchRecommendation {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  category: string;
+  priority: 'High' | 'Medium' | 'Low';
+  reason: string;
+  suggestion: string;
+  metric: string;
+  currentValue: string;
+  targetValue: string;
+}
+
+const nextBatchRecommendations: NextBatchRecommendation[] = [
+  {
+    id: 'REC-01',
+    title: 'Add Cloud (AWS) practical module to curriculum',
+    icon: <BookOpen className="h-5 w-5" />,
+    category: 'Skill Gap',
+    priority: 'High',
+    reason: 'Cloud (AWS) appears in 88% of local job postings but only 20% of training curricula. This is the single largest skill gap across all cohorts. Trainees without cloud knowledge are excluded from most data and IT roles.',
+    suggestion: 'Introduce a 40-hour AWS fundamentals module covering EC2, S3, and IAM. Replace 15% of theoretical ML content with hands-on cloud labs.',
+    metric: 'Cloud Skill Coverage',
+    currentValue: '20%',
+    targetValue: '65%',
+  },
+  {
+    id: 'REC-02',
+    title: 'Add Power BI dashboard exercises with real datasets',
+    icon: <BookOpen className="h-5 w-5" />,
+    category: 'Skill Gap',
+    priority: 'High',
+    reason: 'Power BI demand is at 72% but training coverage is only 15%. The previous cohort that added Power BI saw an 11pp improvement in relevant employment, suggesting this directly impacts job outcomes.',
+    suggestion: 'Add a 30-hour Power BI module with real-world datasets. Include a capstone project requiring Power BI dashboard creation and Cloud deployment.',
+    metric: 'Power BI Coverage',
+    currentValue: '15%',
+    targetValue: '60%',
+  },
+  {
+    id: 'REC-03',
+    title: 'Launch workplace mentorship and retention support',
+    icon: <Users className="h-5 w-5" />,
+    category: 'Retention Pattern',
+    priority: 'High',
+    reason: 'Employment retention drops from 100% at 30 days to 57% at 365 days — a 43pp decline. Exit patterns show workplace adjustment issues and salary below market median. The current cohort has a 44% 6-month retention rate.',
+    suggestion: 'Assign a workplace mentor to each placed trainee for the first 90 days. Schedule bi-weekly check-in calls. Check salary parity with district median.',
+    metric: '6-Month Retention',
+    currentValue: '44%',
+    targetValue: '60%',
+  },
+  {
+    id: 'REC-04',
+    title: 'Add communication and interview readiness workshops',
+    icon: <Briefcase className="h-5 w-5" />,
+    category: 'Employment Pattern',
+    priority: 'Medium',
+    reason: '17% of non-placement reasons relate to interview readiness, not skill gaps. Trainees have the technical skills but fail at the interview stage. Soft skills are not covered in any current curriculum.',
+    suggestion: 'Add bi-weekly 2-hour workshops on communication, resume writing, and mock interviews. Invite industry guests for Q&A sessions.',
+    metric: 'Placement Rate',
+    currentValue: '73%',
+    targetValue: '82%',
+  },
+  {
+    id: 'REC-05',
+    title: 'Implement automated evidence collection workflow',
+    icon: <ShieldCheck className="h-5 w-5" />,
+    category: 'Data Quality',
+    priority: 'Medium',
+    reason: 'Only 38% of outcomes have evidence beyond self-report. Follow-up response rate is 85% but evidence coverage lags at 38%. Without evidence, outcome confidence remains low and cohort comparisons are less reliable.',
+    suggestion: 'Automate evidence requests at each follow-up. Send WhatsApp reminders with upload links. Schedule employer verification calls for 90-day follow-ups.',
+    metric: 'Evidence Coverage',
+    currentValue: '38%',
+    targetValue: '70%',
+  },
+];
+
+const priorityColors: Record<NextBatchRecommendation['priority'], 'rose' | 'amber' | 'gray'> = {
+  High: 'rose',
+  Medium: 'amber',
+  Low: 'gray',
+};
 
 export function NextCohortLearning() {
   return (
@@ -98,6 +181,63 @@ export function NextCohortLearning() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Recommendations for next batch */}
+      <div>
+        <div className="flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-brand-500" />
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recommendations for Next Training Batch</h3>
+        </div>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Derived from outcome data, skill gap analysis, and employment/retention patterns across previous cohorts
+        </p>
+
+        <div className="mt-4 space-y-4">
+          {nextBatchRecommendations.map((rec) => (
+            <Card key={rec.id} className="p-5 animate-slide-up border-l-4 border-l-brand-400">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
+                  {rec.icon}
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">{rec.title}</h4>
+                    <Badge color="gray" size="sm">{rec.id}</Badge>
+                    <Badge color="brand" size="sm">{rec.category}</Badge>
+                    <Badge color={priorityColors[rec.priority]} size="sm">{rec.priority} Priority</Badge>
+                  </div>
+
+                  {/* Reason */}
+                  <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Why this is recommended</p>
+                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{rec.reason}</p>
+                  </div>
+
+                  {/* Suggestion */}
+                  <div className="flex items-start gap-2 rounded-lg bg-brand-50 p-3 dark:bg-brand-900/20">
+                    <Lightbulb className="h-4 w-4 shrink-0 text-brand-500" />
+                    <div>
+                      <p className="text-xs font-semibold text-brand-600 uppercase">Suggested Action</p>
+                      <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-300">{rec.suggestion}</p>
+                    </div>
+                  </div>
+
+                  {/* Metric target */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <div><span className="text-gray-500">Metric:</span> <span className="font-medium text-gray-900 dark:text-white">{rec.metric}</span></div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-500">Target:</span>
+                      <span className="font-medium text-rose-600 dark:text-rose-400">{rec.currentValue}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{rec.targetValue}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Uncertainty section */}
