@@ -9,6 +9,14 @@ export type EvidenceState =
 export type TrainingStatus = 'Enrolled' | 'In Training' | 'Completed' | 'Dropped Out' | 'Certified';
 export type FollowUpMethod = 'WhatsApp' | 'SMS' | 'Email' | 'Phone Call' | 'Assisted Follow-up';
 export type FollowUpStatus = 'Pending' | 'Scheduled' | 'Sent' | 'Responded' | 'No Response' | 'Assisted' | 'Completed';
+
+export interface FollowUpCommunicationLog {
+  id: string;
+  method: FollowUpMethod;
+  timestamp: string;
+  outcome: 'Sent' | 'Delivered' | 'Responded' | 'No Response' | 'Failed';
+  note: string;
+}
 export type ConsentCategoryType =
   | 'Profile Data'
   | 'Training Data'
@@ -70,6 +78,8 @@ export interface FollowUp {
   lastContacted?: string | null;
   nextFollowUp?: string | null;
   formResponse?: FollowUpFormResponse | null;
+  isOverdue?: boolean;
+  communicationLog?: FollowUpCommunicationLog[];
 }
 
 export interface TimelineEvent {
@@ -247,19 +257,62 @@ function makeFollowUps(baseSalary: number, placed: boolean, relevant: boolean): 
     { period: '30 Days', days: 30 },
     { period: '90 Days', days: 90 },
     { period: '180 Days', days: 180 },
-    { period: '12 Months', days: 365 },
+    { period: '365 Days', days: 365 },
   ];
   const evidences: EvidenceState[] = ['Self-Reported', 'Evidence-Supported', 'Employer-Verified', 'Evidence-Supported'];
-  const methods: FollowUpMethod[] = ['WhatsApp', 'SMS', 'Email', 'Phone Call'];
+  const methods: FollowUpMethod[] = ['WhatsApp', 'SMS', 'Email', 'Phone Call', 'Assisted Follow-up'];
   const dueDates = ['2025-06-10', '2025-08-10', '2025-11-10', '2026-05-10'];
 
   return periods.map((p, i) => {
     const dropOff = i >= 2 && Math.random() < 0.15;
     const stillEmployed = placed && !dropOff;
     const salaryGrowth = stillEmployed ? Math.round(baseSalary * (1 + i * 0.05)) : null;
-    const responded = Math.random() > 0.15;
-    const status: FollowUpStatus = responded ? (i === 3 ? 'Completed' : 'Responded') : i === 0 ? 'Pending' : i === 1 ? 'Sent' : 'No Response';
-    const isOverdue = !responded && i < 3;
+    const responded = Math.random() > 0.18;
+    const isOverdueFlag = !responded && i < 3 && Math.random() > 0.5;
+    const method = methods[i % methods.length];
+    let status: FollowUpStatus;
+    if (responded) {
+      status = i === 3 ? 'Completed' : 'Responded';
+    } else if (isOverdueFlag) {
+      status = 'No Response';
+    } else if (i === 0) {
+      status = 'Pending';
+    } else if (method === 'Assisted Follow-up') {
+      status = 'Assisted';
+    } else {
+      status = 'Sent';
+    }
+
+    // Build communication log
+    const commLog: FollowUpCommunicationLog[] = [];
+    if (i > 0 || responded) {
+      commLog.push({
+        id: `${p.period}-c1`,
+        method,
+        timestamp: `${dueDates[i]} 10:00`,
+        outcome: responded ? 'Responded' : 'Delivered',
+        note: responded ? 'Trainee responded to follow-up' : 'Message delivered, awaiting response',
+      });
+    }
+    if (isOverdueFlag) {
+      commLog.push({
+        id: `${p.period}-c2`,
+        method: 'Phone Call',
+        timestamp: `${dueDates[i]} 15:30`,
+        outcome: 'No Response',
+        note: 'Attempted phone call — no answer. Flagged as overdue.',
+      });
+    }
+    if (method === 'Assisted Follow-up') {
+      commLog.push({
+        id: `${p.period}-c3`,
+        method: 'Assisted Follow-up',
+        timestamp: `${dueDates[i]} 12:00`,
+        outcome: 'Sent',
+        note: 'Field staff assisting trainee to complete follow-up form',
+      });
+    }
+
     return {
       period: p.period,
       days: p.days,
@@ -270,11 +323,13 @@ function makeFollowUps(baseSalary: number, placed: boolean, relevant: boolean): 
       livelihoodStatus: stillEmployed ? (relevant ? 'Relevant Employment' : 'Employed (Low Relevance)') : 'Seeking Work',
       evidence: evidences[i],
       responded,
-      method: methods[i % methods.length],
-      status: isOverdue ? 'No Response' : status,
+      method,
+      status,
       dueDate: dueDates[i],
       lastContacted: responded ? dueDates[i] : i > 0 ? dueDates[i - 1] : null,
       nextFollowUp: i < 3 ? dueDates[i + 1] : null,
+      isOverdue: isOverdueFlag,
+      communicationLog: commLog,
       formResponse: responded ? {
         currentStatus: stillEmployed ? 'Employed' : 'Looking for work',
         occupation: stillEmployed ? jobRoles[i % jobRoles.length] : '',
@@ -283,7 +338,7 @@ function makeFollowUps(baseSalary: number, placed: boolean, relevant: boolean): 
         wageRange: salaryGrowth ? `₹${salaryGrowth.toLocaleString('en-IN')} – ₹${(salaryGrowth + 3000).toLocaleString('en-IN')}` : '',
         usingSkills: stillEmployed ? relevant : false,
         needsTraining: !stillEmployed || Math.random() > 0.7,
-        comments: '',
+        comments: stillEmployed && Math.random() > 0.8 ? 'Looking for opportunities to upskill in advanced topics.' : '',
       } : null,
     };
   });
@@ -926,9 +981,36 @@ export const extendedKpis = {
   certified: trainees.filter((t) => t.certified).length,
   followUpsDue: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Pending' || f.status === 'Scheduled' || f.status === 'Sent').length, 0),
   followUpsCompleted: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Completed' || f.status === 'Responded').length, 0),
-  followUpsOverdue: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'No Response' && !f.responded).length, 0),
+  followUpsOverdue: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.isOverdue || (f.status === 'No Response' && !f.responded)).length, 0),
+  followUpsAssisted: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Assisted' || f.method === 'Assisted Follow-up').length, 0),
+  followUpsScheduled: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Scheduled').length, 0),
+  totalFollowUps: trainees.reduce((sum, t) => sum + t.followUps.length, 0),
+  responseRate: (() => {
+    const total = trainees.reduce((sum, t) => sum + t.followUps.length, 0);
+    const completed = trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Completed' || f.status === 'Responded').length, 0);
+    return total > 0 ? Math.round((completed / total) * 100) : 0;
+  })(),
   consentRate: Math.round((trainees.filter((t) => t.consentRecords.filter((c) => c.status === 'Given').length >= 3).length / trainees.length) * 100),
 };
+
+// ---------- Overdue Follow-Ups List ----------
+export const overdueFollowUps = trainees
+  .flatMap((t) => t.followUps
+    .filter((f) => f.isOverdue || (f.status === 'No Response' && !f.responded))
+    .map((f) => ({
+      traineeId: t.id,
+      traineeName: t.name,
+      unifiedId: t.unifiedId,
+      providerName: t.providerName,
+      district: t.district,
+      period: f.period,
+      days: f.days,
+      dueDate: f.dueDate || '',
+      method: f.method || 'WhatsApp',
+      status: f.status || 'No Response',
+    }))
+  )
+  .sort((a, b) => a.days - b.days);
 
 // ---------- Provider Follow-Up Stats ----------
 export const providerFollowUpStats: ProviderFollowUpStat[] = providers.map((p) => {

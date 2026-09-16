@@ -16,6 +16,7 @@ import { DistrictIntelligence } from '@/pages/DistrictIntelligence';
 import { SkillPassport } from '@/pages/SkillPassport';
 import { PrivacyConsent } from '@/pages/PrivacyConsent';
 import { TrainingData } from '@/pages/TrainingData';
+import { FollowUps } from '@/pages/FollowUps';
 import { TraineeLogin } from '@/pages/trainee/TraineeLogin';
 import { TraineeSidebar, type TraineePageKey } from '@/components/TraineeSidebar';
 import { TraineeProvider } from '@/context/TraineeContext';
@@ -107,6 +108,7 @@ function App() {
       case 'district': return <DistrictIntelligence />;
       case 'passport': return <SkillPassport />;
       case 'privacy': return <PrivacyConsent />;
+      case 'followups': return <FollowUps />;
       default: return <Overview onNavigate={setCurrentPage} />;
     }
   };

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Target, Stethoscope, BrainCircuit,
   TrendingUp, AlertTriangle, Wrench, GraduationCap, Building2,
   MapPin, BadgeCheck, ShieldCheck, Menu, X, Moon, Sun, Activity,
-  ClipboardList,
+  ClipboardList, Send,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import type { ReactNode } from 'react';
@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 export type PageKey =
   | 'overview' | 'trainees' | 'trainingdata' | 'outcomes' | 'autopsy' | 'skillgap'
   | 'retention' | 'earlywarning' | 'interventions' | 'nextcohort'
-  | 'providers' | 'district' | 'passport' | 'privacy';
+  | 'providers' | 'district' | 'passport' | 'privacy' | 'followups';
 
 interface NavItem {
   key: PageKey;
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { key: 'district', label: 'District Intelligence', icon: <MapPin className="h-5 w-5" /> },
   { key: 'passport', label: 'Skill Passport', icon: <BadgeCheck className="h-5 w-5" /> },
   { key: 'privacy', label: 'Privacy & Consent', icon: <ShieldCheck className="h-5 w-5" /> },
+  { key: 'followups', label: 'Follow-Up System', icon: <Send className="h-5 w-5" /> },
 ];
 
 interface SidebarProps {
