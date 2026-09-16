@@ -4,17 +4,18 @@ import {
   CheckCircle2, XCircle, AlertTriangle, BadgeCheck,
   GraduationCap, MapPin, IndianRupee, Calendar, Edit3,
   User, ShieldCheck, History, Share2, Building2,
+  Upload, FileText,
 } from 'lucide-react';
 import { Card, SectionTitle, Badge, EvidenceBadge, ProgressBar } from '@/components/ui';
 import { KPICard } from '@/components/ui/KPICard';
-import { useTrainee } from '@/context/TraineeContext';
+import { useTrainee, type VerificationStatus } from '@/context/TraineeContext';
 import { UpdateOutcomeModal } from '@/pages/trainee/UpdateOutcomeModal';
 import { FollowUpTimeline } from '@/pages/trainee/FollowUpTimeline';
 import { trainingStatusColors } from '@/data/mockData';
 import type { TraineePageKey } from '@/components/TraineeSidebar';
 
 export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string; onNavigate?: (page: TraineePageKey) => void }) {
-  const { trainee, outcomeUpdate } = useTrainee();
+  const { trainee, outcomeUpdate, updateVerificationStatus, uploadEvidence } = useTrainee();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   const placementStatus = trainee.employmentStatus === 'Placed'
@@ -172,8 +173,17 @@ export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string;
 
       {/* My Current Outcome (self-reported) */}
       {outcomeUpdate && (
-        <Card className="border-l-4 border-l-brand-400 p-5">
-          <SectionTitle title="My Self-Reported Outcome" subtitle={`Submitted on ${outcomeUpdate.submittedAt}`} icon={<CheckCircle2 className="h-5 w-5" />} />
+        <Card className={`border-l-4 p-5 ${
+          outcomeUpdate.verificationStatus === 'Verified' ? 'border-l-emerald-400'
+          : outcomeUpdate.verificationStatus === 'Evidence Submitted' ? 'border-l-brand-400'
+          : outcomeUpdate.verificationStatus === 'Under Review' ? 'border-l-amber-400'
+          : outcomeUpdate.verificationStatus === 'Needs Update' ? 'border-l-rose-400'
+          : 'border-l-gray-300'
+        }`}>
+          <div className="flex items-start justify-between">
+            <SectionTitle title="My Self-Reported Outcome" subtitle={`Submitted on ${outcomeUpdate.submittedAt}`} icon={<CheckCircle2 className="h-5 w-5" />} />
+            <VerificationBadge status={outcomeUpdate.verificationStatus} />
+          </div>
           <div className="mb-3">
             <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
               outcomeUpdate.employmentStatus === 'Placed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
@@ -209,6 +219,70 @@ export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string;
                 <Badge color={outcomeUpdate.jobRelevance === 'High' ? 'emerald' : outcomeUpdate.jobRelevance === 'Moderate' ? 'amber' : 'rose'} size="sm">{outcomeUpdate.jobRelevance}</Badge>
               </div>
             )}
+          </div>
+
+          {/* Verification & Evidence Section */}
+          <div className="mt-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-brand-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Verification Status</span>
+              </div>
+              <VerificationBadge status={outcomeUpdate.verificationStatus} />
+            </div>
+            <div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span>Submitted: {outcomeUpdate.submittedAt}</span>
+              <span>Evidence: {outcomeUpdate.evidenceDocuments.length > 0 ? `${outcomeUpdate.evidenceDocuments.length} document(s)` : 'None submitted'}</span>
+            </div>
+
+            {/* Evidence documents list */}
+            {outcomeUpdate.evidenceDocuments.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {outcomeUpdate.evidenceDocuments.map((doc) => (
+                  <div key={doc.id} className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/50">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{doc.fileName}</span>
+                    <span className="ml-auto text-xs text-gray-400">{doc.fileType}</span>
+                    <span className="text-xs text-gray-400">{doc.uploadedAt}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload evidence button */}
+            {outcomeUpdate.verificationStatus !== 'Verified' && (
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => uploadEvidence(`evidence_doc_${Date.now()}.pdf`, 'PDF')}
+                  className="flex items-center gap-2 rounded-lg border border-dashed border-brand-300 px-4 py-2 text-sm text-brand-600 transition hover:bg-brand-50 dark:border-brand-700 dark:text-brand-400 dark:hover:bg-brand-900/20"
+                >
+                  <Upload className="h-4 w-4" /> Upload Evidence (Simulated)
+                </button>
+                {outcomeUpdate.verificationStatus === 'Needs Update' && (
+                  <span className="text-xs text-rose-600 dark:text-rose-400">Action required: please update your outcome</span>
+                )}
+              </div>
+            )}
+
+            {/* Self-reported vs verified distinction */}
+            <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+              outcomeUpdate.verificationStatus === 'Verified'
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                : outcomeUpdate.verificationStatus === 'Self-Reported'
+                ? 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400'
+                : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+            }`}>
+              {outcomeUpdate.verificationStatus === 'Verified'
+                ? 'VERIFIED — This outcome has been verified by an administrator/verifier.'
+                : outcomeUpdate.verificationStatus === 'Self-Reported'
+                ? 'SELF-REPORTED — This outcome has not been verified. Data shown above is self-reported by the trainee.'
+                : outcomeUpdate.verificationStatus === 'Evidence Submitted'
+                ? 'EVIDENCE SUBMITTED — Documents have been submitted and are awaiting review.'
+                : outcomeUpdate.verificationStatus === 'Under Review'
+                ? 'UNDER REVIEW — A verifier is currently reviewing this outcome.'
+                : 'NEEDS UPDATE — A verifier has requested an update. Please edit and resubmit your outcome.'}
+            </div>
           </div>
         </Card>
       )}
@@ -335,6 +409,22 @@ export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string;
 
       <UpdateOutcomeModal open={showUpdateModal} onClose={() => setShowUpdateModal(false)} />
     </div>
+  );
+}
+
+function VerificationBadge({ status }: { status: VerificationStatus }) {
+  const config: Record<VerificationStatus, { bg: string; text: string; icon: React.ReactNode }> = {
+    'Self-Reported': { bg: 'bg-gray-100 dark:bg-gray-800/50', text: 'text-gray-600 dark:text-gray-400', icon: <FileText className="h-3.5 w-3.5" /> },
+    'Evidence Submitted': { bg: 'bg-brand-100 dark:bg-brand-900/30', text: 'text-brand-700 dark:text-brand-300', icon: <Upload className="h-3.5 w-3.5" /> },
+    'Under Review': { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300', icon: <Clock className="h-3.5 w-3.5" /> },
+    'Verified': { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+    'Needs Update': { bg: 'bg-rose-100 dark:bg-rose-900/30', text: 'text-rose-700 dark:text-rose-300', icon: <AlertTriangle className="h-3.5 w-3.5" /> },
+  };
+  const c = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${c.bg} ${c.text}`}>
+      {c.icon} {status}
+    </span>
   );
 }
 

@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import {
   Target, Briefcase, TrendingUp, FileCheck, ShoppingBag,
   Wrench, Award, IndianRupee, Clock, Info,
+  CheckCircle2, AlertTriangle, Upload, FileText, ShieldCheck,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -8,24 +10,69 @@ import {
 } from 'recharts';
 import { KPICard } from '@/components/ui/KPICard';
 import { Card, SectionTitle, Badge, EvidenceBadge, ProgressBar } from '@/components/ui';
-import { kpis, trainees } from '@/data/mockData';
+import { kpis, trainees, type Trainee } from '@/data/mockData';
+import type { VerificationStatus } from '@/context/TraineeContext';
 
-const evidencePieData = [
-  { name: 'Self-Reported', value: trainees.filter((t) => t.evidence === 'Self-Reported').length, color: '#9ca3af' },
-  { name: 'Evidence-Supported', value: trainees.filter((t) => t.evidence === 'Evidence-Supported').length, color: '#3380fc' },
-  { name: 'Employer-Verified', value: trainees.filter((t) => t.evidence === 'Employer-Verified').length, color: '#10b981' },
-  { name: 'Under Review', value: trainees.filter((t) => t.evidence === 'Under Review').length, color: '#f59e0b' },
+const VERIFICATION_STATUSES: VerificationStatus[] = [
+  'Self-Reported',
+  'Evidence Submitted',
+  'Under Review',
+  'Verified',
+  'Needs Update',
 ];
 
-const employmentBreakdown = [
-  { type: 'Placed (Relevant)', count: trainees.filter((t) => t.jobRelevance === 'High' || t.jobRelevance === 'Moderate').length, color: '#10b981' },
-  { type: 'Placed (Low Relevance)', count: trainees.filter((t) => t.employmentStatus === 'Placed' && t.jobRelevance === 'Low').length, color: '#f59e0b' },
-  { type: 'Self-Employed', count: trainees.filter((t) => t.isSelfEmployed).length, color: '#8b5cf6' },
-  { type: 'Apprenticeship', count: trainees.filter((t) => t.isApprenticeship).length, color: '#f43f5e' },
-  { type: 'Unplaced', count: trainees.filter((t) => t.employmentStatus === 'Unplaced').length, color: '#ef4444' },
-];
+function traineeVerificationStatus(t: Trainee): VerificationStatus {
+  if (t.evidence === 'Employer-Verified') return 'Verified';
+  if (t.evidence === 'Evidence-Supported') return 'Evidence Submitted';
+  if (t.evidence === 'Under Review') return 'Under Review';
+  return 'Self-Reported';
+}
+
+const verificationColors: Record<VerificationStatus, string> = {
+  'Self-Reported': '#9ca3af',
+  'Evidence Submitted': '#3380fc',
+  'Under Review': '#f59e0b',
+  'Verified': '#10b981',
+  'Needs Update': '#f43f5e',
+};
+
+const verificationBadgeColors: Record<VerificationStatus, 'gray' | 'brand' | 'amber' | 'emerald' | 'rose'> = {
+  'Self-Reported': 'gray',
+  'Evidence Submitted': 'brand',
+  'Under Review': 'amber',
+  'Verified': 'emerald',
+  'Needs Update': 'rose',
+};
 
 export function Outcomes() {
+  const [verifications, setVerifications] = useState<Record<string, VerificationStatus>>({});
+
+  const getVStatus = (t: Trainee): VerificationStatus => verifications[t.id] || traineeVerificationStatus(t);
+
+  const handleStatusChange = (traineeId: string, status: VerificationStatus) => {
+    setVerifications((prev) => ({ ...prev, [traineeId]: status }));
+  };
+
+  const verificationPieData = VERIFICATION_STATUSES.map((s) => ({
+    name: s,
+    value: trainees.filter((t) => getVStatus(t) === s).length,
+    color: verificationColors[s],
+  })).filter((d) => d.value > 0);
+
+  const employmentBreakdown = [
+    { type: 'Placed (Relevant)', count: trainees.filter((t) => t.jobRelevance === 'High' || t.jobRelevance === 'Moderate').length, color: '#10b981' },
+    { type: 'Placed (Low Relevance)', count: trainees.filter((t) => t.employmentStatus === 'Placed' && t.jobRelevance === 'Low').length, color: '#f59e0b' },
+    { type: 'Self-Employed', count: trainees.filter((t) => t.isSelfEmployed).length, color: '#8b5cf6' },
+    { type: 'Apprenticeship', count: trainees.filter((t) => t.isApprenticeship).length, color: '#f43f5e' },
+    { type: 'Unplaced', count: trainees.filter((t) => t.employmentStatus === 'Unplaced').length, color: '#ef4444' },
+  ];
+
+  const verifiedCount = trainees.filter((t) => getVStatus(t) === 'Verified').length;
+  const evidenceCount = trainees.filter((t) => getVStatus(t) === 'Evidence Submitted').length;
+  const reviewCount = trainees.filter((t) => getVStatus(t) === 'Under Review').length;
+  const selfReportedCount = trainees.filter((t) => getVStatus(t) === 'Self-Reported').length;
+  const needsUpdateCount = trainees.filter((t) => getVStatus(t) === 'Needs Update').length;
+
   return (
     <div className="space-y-6">
       <div>
@@ -39,6 +86,45 @@ export function Outcomes() {
         <KPICard title="Self-Employed" value={kpis.traineesSelfEmployed} icon={<ShoppingBag className="h-5 w-5" />} numerator={kpis.traineesSelfEmployed} denominator={kpis.totalTrainees} color="amber" />
         <KPICard title="Apprenticeship" value={kpis.traineesApprenticeship} icon={<Wrench className="h-5 w-5" />} numerator={kpis.traineesApprenticeship} denominator={kpis.totalTrainees} color="violet" />
         <KPICard title="Relevant Employment" value={kpis.relevantEmploymentRate} unit="%" icon={<Target className="h-5 w-5" />} numerator={kpis.traineesRelevant} denominator={kpis.totalTrainees} color="brand" />
+      </div>
+
+      {/* Verification KPIs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <Card className="p-4">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-gray-400" />
+            <span className="text-xs text-gray-500">Self-Reported</span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{selfReportedCount}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-brand-500" />
+            <span className="text-xs text-gray-500">Evidence Submitted</span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{evidenceCount}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-500" />
+            <span className="text-xs text-gray-500">Under Review</span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{reviewCount}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <span className="text-xs text-gray-500">Verified</span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{verifiedCount}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-500" />
+            <span className="text-xs text-gray-500">Needs Update</span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{needsUpdateCount}</p>
+        </Card>
       </div>
 
       {/* Important note */}
@@ -71,18 +157,18 @@ export function Outcomes() {
         </Card>
 
         <Card className="p-5">
-          <SectionTitle title="Evidence States" subtitle="Verification breakdown" icon={<FileCheck className="h-5 w-5" />} />
+          <SectionTitle title="Verification Status" subtitle="Outcome verification breakdown" icon={<ShieldCheck className="h-5 w-5" />} />
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={evidencePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={2}>
-                {evidencePieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+              <Pie data={verificationPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={2}>
+                {verificationPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
               </Pie>
               <Tooltip />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-2 space-y-2">
-            {evidencePieData.map((e) => (
+            {verificationPieData.map((e) => (
               <div key={e.name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 rounded-full" style={{ background: e.color }} />
@@ -98,7 +184,7 @@ export function Outcomes() {
       {/* Outcome table */}
       <Card className="overflow-hidden">
         <div className="p-5 pb-0">
-          <SectionTitle title="Trainee Outcomes Detail" subtitle="All trainees with evidence and follow-up status" icon={<Target className="h-5 w-5" />} />
+          <SectionTitle title="Trainee Outcomes Detail" subtitle="All trainees with evidence, verification, and follow-up status" icon={<Target className="h-5 w-5" />} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -110,14 +196,16 @@ export function Outcomes() {
                 <th className="px-4 py-3 font-medium">Relevance</th>
                 <th className="px-4 py-3 font-medium">Retention</th>
                 <th className="px-4 py-3 font-medium">Evidence</th>
+                <th className="px-4 py-3 font-medium">Verification</th>
                 <th className="px-4 py-3 font-medium">Follow-ups</th>
               </tr>
             </thead>
             <tbody>
               {trainees.map((t) => {
                 const responded = t.followUps.filter((f) => f.responded).length;
+                const vStatus = getVStatus(t);
                 return (
-                  <tr key={t.id} className="border-t border-gray-100 dark:border-gray-800">
+                  <tr key={t.id} className={`border-t border-gray-100 dark:border-gray-800 ${vStatus === 'Verified' ? 'bg-emerald-50/30 dark:bg-emerald-900/5' : vStatus === 'Needs Update' ? 'bg-rose-50/30 dark:bg-rose-900/5' : ''}`}>
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{t.name}</td>
                     <td className="px-4 py-3">
                       <Badge color={t.employmentStatus === 'Placed' ? 'emerald' : t.employmentStatus === 'Self-Employed' ? 'amber' : t.employmentStatus === 'Apprenticeship' ? 'violet' : 'rose'}>
@@ -132,6 +220,21 @@ export function Outcomes() {
                     <td className="px-4 py-3"><EvidenceBadge state={t.evidence} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <Badge color={verificationBadgeColors[vStatus]} size="sm">{vStatus}</Badge>
+                        <select
+                          value={vStatus}
+                          onChange={(e) => handleStatusChange(t.id, e.target.value as VerificationStatus)}
+                          className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                          title="Change verification status (admin/verifier)"
+                        >
+                          {VERIFICATION_STATUSES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">{responded}/4</span>
                         <div className="w-16"><ProgressBar value={responded} max={4} color={responded === 4 ? 'emerald' : responded >= 2 ? 'amber' : 'rose'} /></div>
                       </div>
@@ -141,6 +244,11 @@ export function Outcomes() {
               })}
             </tbody>
           </table>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            DEMO — Admin/verifier status changes are simulated and stored in-memory only. In production, this would update the database and notify the trainee.
+          </p>
         </div>
       </Card>
     </div>

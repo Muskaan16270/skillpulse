@@ -55,10 +55,14 @@ export function FollowUpFormModal({ open, onClose, periodLabel }: FollowUpFormMo
     const mappedStatus: OutcomeUpdate['employmentStatus'] =
       currentStatus === 'Employed' || currentStatus === 'Self-employed' ? (currentStatus === 'Self-employed' ? 'Self-Employed' : 'Placed')
       : currentStatus === 'Apprentice' ? 'Apprenticeship'
-      : 'Unplaced';
+      : currentStatus === 'Studying' ? 'Higher Education'
+      : currentStatus === 'Looking for work' ? 'Looking for Work'
+      : 'Not Currently Working';
 
     const outcomeRecord: OutcomeUpdate = {
       employmentStatus: mappedStatus,
+      verificationStatus: 'Self-Reported',
+      evidenceDocuments: [],
       jobRole: occupation,
       industry: employer,
       joiningDate: '',

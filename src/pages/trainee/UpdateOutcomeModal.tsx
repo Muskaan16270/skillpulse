@@ -2,9 +2,10 @@ import { useState } from 'react';
 import {
   X, Briefcase, MapPin, Calendar, IndianRupee, TrendingUp,
   CheckCircle2, AlertTriangle, Building2, GraduationCap, User,
+  Upload, FileText, Paperclip, ShieldCheck,
 } from 'lucide-react';
 import { Card } from '@/components/ui';
-import { useTrainee, type OutcomeUpdate, type OutcomeStatus } from '@/context/TraineeContext';
+import { useTrainee, type OutcomeUpdate, type OutcomeStatus, type VerificationStatus } from '@/context/TraineeContext';
 
 interface UpdateOutcomeModalProps {
   open: boolean;
@@ -57,9 +58,27 @@ export function UpdateOutcomeModal({ open, onClose, periodLabel }: UpdateOutcome
   // Shared
   const [jobRelevance, setJobRelevance] = useState<NonNullable<OutcomeUpdate['jobRelevance']>>('High');
 
+  // Evidence upload (simulated)
+  const [evidenceDocs, setEvidenceDocs] = useState<{ fileName: string; fileType: string }[]>([]);
+  const [evidenceNote, setEvidenceNote] = useState('');
+
   if (!open) return null;
 
   const needsNoDetails = status === 'Looking for Work' || status === 'Not Currently Working';
+  const canUploadEvidence = !needsNoDetails;
+
+  const handleSimulatedUpload = () => {
+    const sampleDocs = [
+      { fileName: 'offer_letter.pdf', fileType: 'PDF' },
+      { fileName: 'salary_slip.jpg', fileType: 'Image' },
+      { fileName: 'appointment_letter.pdf', fileType: 'PDF' },
+      { fileName: 'business_registration.png', fileType: 'Image' },
+      { fileName: 'apprenticeship_contract.pdf', fileType: 'PDF' },
+      { fileName: 'admission_letter.pdf', fileType: 'PDF' },
+    ];
+    const idx = evidenceDocs.length % sampleDocs.length;
+    setEvidenceDocs((prev) => [...prev, sampleDocs[idx]]);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +113,14 @@ export function UpdateOutcomeModal({ open, onClose, periodLabel }: UpdateOutcome
     const record: OutcomeUpdate = {
       employmentStatus: status,
       jobRelevance,
+      verificationStatus: evidenceDocs.length > 0 ? 'Evidence Submitted' : 'Self-Reported',
+      evidenceDocuments: evidenceDocs.map((d, i) => ({
+        id: `doc-${Date.now()}-${i}`,
+        fileName: d.fileName,
+        fileType: d.fileType,
+        uploadedAt: new Date().toLocaleString('en-IN'),
+        simulated: true as const,
+      })),
       // Legacy compat
       jobRole: jobTitle || businessType || role || courseName || '',
       industry: employer || organization || institutionName || '',
@@ -346,6 +373,64 @@ export function UpdateOutcomeModal({ open, onClose, periodLabel }: UpdateOutcome
                 <Field label="Location">
                   <InputWithIcon icon={<MapPin className="h-4 w-4" />} value={eduLocation} onChange={setEduLocation} placeholder="e.g., Mumbai, Maharashtra" />
                 </Field>
+              </div>
+            )}
+
+            {/* EVIDENCE UPLOAD (simulated) */}
+            {canUploadEvidence && (
+              <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-brand-500" />
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Upload Evidence (Optional)</p>
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Attach proof of your outcome (offer letter, salary slip, business registration, etc.). This is simulated — no real files are uploaded.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSimulatedUpload}
+                    className="flex items-center gap-2 rounded-lg border border-dashed border-brand-300 px-4 py-2 text-sm text-brand-600 transition hover:bg-brand-50 dark:border-brand-700 dark:text-brand-400 dark:hover:bg-brand-900/20"
+                  >
+                    <Upload className="h-4 w-4" /> Attach Document (Simulated)
+                  </button>
+                </div>
+                {evidenceDocs.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {evidenceDocs.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/50">
+                        <FileText className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{d.fileName}</span>
+                        <span className="ml-auto text-xs text-gray-400">{d.fileType}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEvidenceDocs((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-gray-400 hover:text-rose-500"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-medium text-gray-500">Notes for verifier (optional)</label>
+                  <input
+                    type="text"
+                    value={evidenceNote}
+                    onChange={(e) => setEvidenceNote(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="e.g., Offer letter attached for verification"
+                  />
+                </div>
+                {evidenceDocs.length > 0 && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 dark:bg-brand-900/20">
+                    <Paperclip className="h-3.5 w-3.5 text-brand-500" />
+                    <span className="text-xs text-brand-700 dark:text-brand-300">
+                      {evidenceDocs.length} document(s) attached — verification status will be "Evidence Submitted"
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

@@ -10,8 +10,25 @@ export type OutcomeStatus =
   | 'Looking for Work'
   | 'Not Currently Working';
 
+export type VerificationStatus =
+  | 'Self-Reported'
+  | 'Evidence Submitted'
+  | 'Under Review'
+  | 'Verified'
+  | 'Needs Update';
+
+export interface EvidenceDocument {
+  id: string;
+  fileName: string;
+  fileType: string;
+  uploadedAt: string;
+  simulated: true;
+}
+
 export interface OutcomeUpdate {
   employmentStatus: OutcomeStatus;
+  verificationStatus: VerificationStatus;
+  evidenceDocuments: EvidenceDocument[];
   // Employment fields
   jobTitle?: string;
   employer?: string;
@@ -50,6 +67,8 @@ interface TraineeContextValue {
   trainee: Trainee;
   outcomeUpdate: OutcomeUpdateRecord | null;
   updateOutcome: (update: OutcomeUpdate) => void;
+  updateVerificationStatus: (status: VerificationStatus) => void;
+  uploadEvidence: (fileName: string, fileType: string) => void;
   followUpUpdates: Record<string, OutcomeUpdateRecord>;
   followUps: FollowUp[];
   updateFollowUp: (period: string, update: OutcomeUpdate) => void;
@@ -67,6 +86,15 @@ function mapStatusToTrainee(status: OutcomeStatus): Trainee['employmentStatus'] 
     case 'Self-Employed': return 'Self-Employed';
     case 'Apprenticeship': return 'Apprenticeship';
     default: return 'Unplaced';
+  }
+}
+
+function mapVerificationToEvidence(v: VerificationStatus): Trainee['evidence'] {
+  switch (v) {
+    case 'Verified': return 'Employer-Verified';
+    case 'Evidence Submitted': return 'Evidence-Supported';
+    case 'Under Review': return 'Under Review';
+    default: return 'Self-Reported';
   }
 }
 
@@ -97,7 +125,7 @@ export function TraineeProvider({ traineeId, children }: { traineeId: string; ch
         jobRelevance: isEmployedType(outcomeUpdate.employmentStatus)
           ? (outcomeUpdate.jobRelevance || null)
           : null,
-        evidence: 'Self-Reported',
+        evidence: mapVerificationToEvidence(outcomeUpdate.verificationStatus),
       }
     : baseTrainee;
 
@@ -113,7 +141,7 @@ export function TraineeProvider({ traineeId, children }: { traineeId: string; ch
       relevant: employed && (update.jobRelevance === 'High' || update.jobRelevance === 'Moderate'),
       retained: employed && f.days >= 180,
       livelihoodStatus: employed ? (update.jobRelevance === 'High' ? 'Relevant Employment' : 'Employed (Low Relevance)') : 'Seeking Work',
-      evidence: 'Self-Reported' as const,
+      evidence: mapVerificationToEvidence(update.verificationStatus),
     };
   });
 
@@ -123,12 +151,37 @@ export function TraineeProvider({ traineeId, children }: { traineeId: string; ch
     setOutcomeUpdate({ ...update, submittedAt: new Date().toLocaleString('en-IN') });
   };
 
+  const updateVerificationStatus = (status: VerificationStatus) => {
+    setOutcomeUpdate((prev) => prev ? { ...prev, verificationStatus: status } : prev);
+  };
+
+  const uploadEvidence = (fileName: string, fileType: string) => {
+    setOutcomeUpdate((prev) => {
+      if (!prev) return prev;
+      const doc: EvidenceDocument = {
+        id: `doc-${Date.now()}`,
+        fileName,
+        fileType,
+        uploadedAt: new Date().toLocaleString('en-IN'),
+        simulated: true,
+      };
+      const newStatus: VerificationStatus = prev.verificationStatus === 'Self-Reported' || prev.verificationStatus === 'Needs Update'
+        ? 'Evidence Submitted'
+        : prev.verificationStatus;
+      return { ...prev, evidenceDocuments: [...prev.evidenceDocuments, doc], verificationStatus: newStatus };
+    });
+  };
+
   const updateFollowUp = (period: string, update: OutcomeUpdate) => {
     setFollowUpUpdates((prev) => ({ ...prev, [period]: { ...update, submittedAt: new Date().toLocaleString('en-IN') } }));
   };
 
   return (
-    <TraineeContext.Provider value={{ traineeId, trainee: mergedWithFollowUps, outcomeUpdate, updateOutcome, followUpUpdates, followUps, updateFollowUp }}>
+    <TraineeContext.Provider value={{
+      traineeId, trainee: mergedWithFollowUps, outcomeUpdate, updateOutcome,
+      updateVerificationStatus, uploadEvidence,
+      followUpUpdates, followUps, updateFollowUp,
+    }}>
       {children}
     </TraineeContext.Provider>
   );
