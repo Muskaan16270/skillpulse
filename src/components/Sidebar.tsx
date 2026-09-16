@@ -3,12 +3,13 @@ import {
   LayoutDashboard, Users, Target, Stethoscope, BrainCircuit,
   TrendingUp, AlertTriangle, Wrench, GraduationCap, Building2,
   MapPin, BadgeCheck, ShieldCheck, Menu, X, Moon, Sun, Activity,
+  ClipboardList,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import type { ReactNode } from 'react';
 
 export type PageKey =
-  | 'overview' | 'trainees' | 'outcomes' | 'autopsy' | 'skillgap'
+  | 'overview' | 'trainees' | 'trainingdata' | 'outcomes' | 'autopsy' | 'skillgap'
   | 'retention' | 'earlywarning' | 'interventions' | 'nextcohort'
   | 'providers' | 'district' | 'passport' | 'privacy';
 
@@ -21,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-5 w-5" /> },
   { key: 'trainees', label: 'Trainees', icon: <Users className="h-5 w-5" /> },
+  { key: 'trainingdata', label: 'Training Data', icon: <ClipboardList className="h-5 w-5" /> },
   { key: 'outcomes', label: 'Outcomes', icon: <Target className="h-5 w-5" /> },
   { key: 'autopsy', label: 'Outcome Autopsy', icon: <Stethoscope className="h-5 w-5" /> },
   { key: 'skillgap', label: 'Skill Gap AI', icon: <BrainCircuit className="h-5 w-5" /> },

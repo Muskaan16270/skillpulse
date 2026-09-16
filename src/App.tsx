@@ -15,6 +15,7 @@ import { Providers } from '@/pages/Providers';
 import { DistrictIntelligence } from '@/pages/DistrictIntelligence';
 import { SkillPassport } from '@/pages/SkillPassport';
 import { PrivacyConsent } from '@/pages/PrivacyConsent';
+import { TrainingData } from '@/pages/TrainingData';
 import { TraineeLogin } from '@/pages/trainee/TraineeLogin';
 import { TraineeSidebar, type TraineePageKey } from '@/components/TraineeSidebar';
 import { TraineeProvider } from '@/context/TraineeContext';
@@ -57,11 +58,11 @@ function App() {
 
     const renderTraineePage = () => {
       switch (traineePage) {
-        case 'dashboard': return <TraineeDashboard traineeId={traineeId} />;
+        case 'dashboard': return <TraineeDashboard traineeId={traineeId} onNavigate={setTraineePage} />;
         case 'profile': return <TraineeProfile traineeId={traineeId} />;
         case 'passport': return <SkillPassport />;
         case 'privacy': return <TraineePrivacy traineeId={traineeId} />;
-        default: return <TraineeDashboard traineeId={traineeId} />;
+        default: return <TraineeDashboard traineeId={traineeId} onNavigate={setTraineePage} />;
       }
     };
 
@@ -94,6 +95,7 @@ function App() {
     switch (currentPage) {
       case 'overview': return <Overview onNavigate={setCurrentPage} />;
       case 'trainees': return <Trainees />;
+      case 'trainingdata': return <TrainingData />;
       case 'outcomes': return <Outcomes />;
       case 'autopsy': return <OutcomeAutopsy />;
       case 'skillgap': return <SkillGapAI />;

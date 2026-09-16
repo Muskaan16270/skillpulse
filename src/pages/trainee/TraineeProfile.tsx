@@ -2,11 +2,12 @@ import { useState } from 'react';
 import {
   User, GraduationCap, Award, Briefcase, MapPin,
   Calendar, IndianRupee, BadgeCheck, AlertTriangle,
-  CheckCircle2, Edit3,
+  CheckCircle2, Edit3, Phone, Mail, Building,
 } from 'lucide-react';
 import { Card, SectionTitle, Badge, EvidenceBadge } from '@/components/ui';
 import { useTrainee } from '@/context/TraineeContext';
 import { UpdateOutcomeModal } from '@/pages/trainee/UpdateOutcomeModal';
+import { trainingStatusColors } from '@/data/mockData';
 
 export function TraineeProfile({ traineeId }: { traineeId: string }) {
   const { trainee, outcomeUpdate } = useTrainee();
@@ -64,10 +65,14 @@ export function TraineeProfile({ traineeId }: { traineeId: string }) {
         <Card className="p-5">
           <SectionTitle title="Personal & Education" icon={<User className="h-5 w-5" />} />
           <dl className="space-y-3 text-sm">
-            <DetailRow label="Age" value={`${trainee.age}`} />
+            <DetailRow label="Trainee ID" value={trainee.unifiedId} icon={<BadgeCheck className="h-4 w-4" />} />
+            <DetailRow label="Date of Birth" value={trainee.dateOfBirth} icon={<Calendar className="h-4 w-4" />} />
             <DetailRow label="Gender" value={trainee.gender} />
+            <DetailRow label="Phone" value={trainee.phone} icon={<Phone className="h-4 w-4" />} />
+            <DetailRow label="Email" value={trainee.email} icon={<Mail className="h-4 w-4" />} />
             <DetailRow label="District" value={`${trainee.district}, ${trainee.state}`} icon={<MapPin className="h-4 w-4" />} />
             <DetailRow label="Education" value={trainee.education} icon={<GraduationCap className="h-4 w-4" />} />
+            <DetailRow label="Institution" value={trainee.institution} icon={<Building className="h-4 w-4" />} />
           </dl>
         </Card>
 
@@ -75,10 +80,19 @@ export function TraineeProfile({ traineeId }: { traineeId: string }) {
         <Card className="p-5">
           <SectionTitle title="Training & Certification" icon={<Award className="h-5 w-5" />} />
           <dl className="space-y-3 text-sm">
+            <DetailRow label="Programme" value={trainee.cohort} />
             <DetailRow label="Course" value={trainee.courseName} />
-            <DetailRow label="Provider" value={trainee.providerName} />
-            <DetailRow label="Cohort" value={trainee.cohort} />
+            <DetailRow label="Training Provider" value={trainee.providerName} />
+            <DetailRow label="Training Centre" value={trainee.trainingCentre} icon={<Building className="h-4 w-4" />} />
+            <DetailRow label="Start Date" value={trainee.startDate} icon={<Calendar className="h-4 w-4" />} />
+            <DetailRow label="Completion Date" value={trainee.completionDate} icon={<Calendar className="h-4 w-4" />} />
             <DetailRow label="Certification" value={trainee.certification} />
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Training Status</span>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${trainingStatusColors[trainee.trainingStatus]}`}>
+                {trainee.trainingStatus}
+              </span>
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-500">Certified</span>
               <Badge color={trainee.certified ? 'emerald' : 'amber'}>{trainee.certified ? 'Yes' : 'Pending'}</Badge>

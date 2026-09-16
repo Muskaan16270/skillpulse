@@ -6,6 +6,54 @@ export type EvidenceState =
   | 'Disputed'
   | 'Closed';
 
+export type TrainingStatus = 'Enrolled' | 'In Training' | 'Completed' | 'Dropped Out' | 'Certified';
+export type FollowUpMethod = 'WhatsApp' | 'SMS' | 'Email' | 'Phone Call' | 'Assisted Follow-up';
+export type FollowUpStatus = 'Pending' | 'Scheduled' | 'Sent' | 'Responded' | 'No Response' | 'Assisted' | 'Completed';
+export type ConsentCategoryType =
+  | 'Profile Data'
+  | 'Training Data'
+  | 'Employment Outcome Data'
+  | 'Verification/Evidence'
+  | 'Analytics & Programme Improvement';
+export type ConsentState = 'Given' | 'Pending' | 'Withdrawn';
+
+export interface ConsentRecord {
+  type: ConsentCategoryType;
+  status: ConsentState;
+  date: string;
+  version: string;
+}
+
+export interface FollowUpFormResponse {
+  currentStatus: 'Employed' | 'Self-employed' | 'Apprentice' | 'Studying' | 'Looking for work' | 'Not currently working' | 'Other';
+  occupation: string;
+  employer: string;
+  location: string;
+  wageRange: string;
+  usingSkills: boolean;
+  needsTraining: boolean;
+  comments: string;
+}
+
+export interface ConsentCategory {
+  type: ConsentCategoryType;
+  description: string;
+  purpose: string;
+  defaultState: ConsentState;
+  canWithdraw: boolean;
+}
+
+export interface ProviderFollowUpStat {
+  providerId: string;
+  providerName: string;
+  totalTrainees: number;
+  followUpsDue: number;
+  followUpsCompleted: number;
+  noResponse: number;
+  overdue: number;
+  responseRate: number;
+}
+
 export interface FollowUp {
   period: string;
   days: number;
@@ -16,6 +64,12 @@ export interface FollowUp {
   livelihoodStatus: string;
   evidence: EvidenceState;
   responded: boolean;
+  method?: FollowUpMethod;
+  status?: FollowUpStatus;
+  dueDate?: string;
+  lastContacted?: string | null;
+  nextFollowUp?: string | null;
+  formResponse?: FollowUpFormResponse | null;
 }
 
 export interface TimelineEvent {
@@ -61,6 +115,15 @@ export interface Trainee {
   skillReadinessScore: number;
   skillReadinessBreakdown: { factor: string; weight: number; score: number; label: string }[];
   warnings: string[];
+  trainingStatus: TrainingStatus;
+  dateOfBirth: string;
+  phone: string;
+  email: string;
+  institution: string;
+  trainingCentre: string;
+  startDate: string;
+  completionDate: string;
+  consentRecords: ConsentRecord[];
 }
 
 export interface Provider {
@@ -187,11 +250,16 @@ function makeFollowUps(baseSalary: number, placed: boolean, relevant: boolean): 
     { period: '12 Months', days: 365 },
   ];
   const evidences: EvidenceState[] = ['Self-Reported', 'Evidence-Supported', 'Employer-Verified', 'Evidence-Supported'];
+  const methods: FollowUpMethod[] = ['WhatsApp', 'SMS', 'Email', 'Phone Call'];
+  const dueDates = ['2025-06-10', '2025-08-10', '2025-11-10', '2026-05-10'];
 
   return periods.map((p, i) => {
     const dropOff = i >= 2 && Math.random() < 0.15;
     const stillEmployed = placed && !dropOff;
     const salaryGrowth = stillEmployed ? Math.round(baseSalary * (1 + i * 0.05)) : null;
+    const responded = Math.random() > 0.15;
+    const status: FollowUpStatus = responded ? (i === 3 ? 'Completed' : 'Responded') : i === 0 ? 'Pending' : i === 1 ? 'Sent' : 'No Response';
+    const isOverdue = !responded && i < 3;
     return {
       period: p.period,
       days: p.days,
@@ -201,7 +269,22 @@ function makeFollowUps(baseSalary: number, placed: boolean, relevant: boolean): 
       retained: stillEmployed && i >= 2,
       livelihoodStatus: stillEmployed ? (relevant ? 'Relevant Employment' : 'Employed (Low Relevance)') : 'Seeking Work',
       evidence: evidences[i],
-      responded: Math.random() > 0.15,
+      responded,
+      method: methods[i % methods.length],
+      status: isOverdue ? 'No Response' : status,
+      dueDate: dueDates[i],
+      lastContacted: responded ? dueDates[i] : i > 0 ? dueDates[i - 1] : null,
+      nextFollowUp: i < 3 ? dueDates[i + 1] : null,
+      formResponse: responded ? {
+        currentStatus: stillEmployed ? 'Employed' : 'Looking for work',
+        occupation: stillEmployed ? jobRoles[i % jobRoles.length] : '',
+        employer: stillEmployed ? industries[i % industries.length] : '',
+        location: stillEmployed ? districts[i % districts.length] : '',
+        wageRange: salaryGrowth ? `₹${salaryGrowth.toLocaleString('en-IN')} – ₹${(salaryGrowth + 3000).toLocaleString('en-IN')}` : '',
+        usingSkills: stillEmployed ? relevant : false,
+        needsTraining: !stillEmployed || Math.random() > 0.7,
+        comments: '',
+      } : null,
     };
   });
 }
@@ -267,6 +350,61 @@ function makeTimeline(trainee: Partial<Trainee>): TimelineEvent[] {
   ];
 }
 
+const consentCategories: ConsentCategory[] = [
+  {
+    type: 'Profile Data',
+    description: 'Your name, contact details, district, and education background',
+    purpose: 'Used to identify you and match you with relevant training programmes. Your employment outcome information helps SkillPulse measure whether training programmes are leading to real-world opportunities.',
+    defaultState: 'Pending',
+    canWithdraw: true,
+  },
+  {
+    type: 'Training Data',
+    description: 'Your course, provider, skills acquired, and certification status',
+    purpose: 'Tracks your training progress and builds your Skill Passport. This data is visible to your training provider.',
+    defaultState: 'Pending',
+    canWithdraw: false,
+  },
+  {
+    type: 'Employment Outcome Data',
+    description: 'Your job role, salary range, industry, and employment status after training',
+    purpose: 'Measures whether training programmes lead to real jobs. Helps improve future curriculum and placement support.',
+    defaultState: 'Pending',
+    canWithdraw: true,
+  },
+  {
+    type: 'Verification/Evidence',
+    description: 'Evidence documents and employer verification records',
+    purpose: 'Strengthens confidence in reported outcomes. Employers can verify your employment without accessing your full profile.',
+    defaultState: 'Pending',
+    canWithdraw: true,
+  },
+  {
+    type: 'Analytics & Programme Improvement',
+    description: 'Aggregated and anonymized data used for programme analysis',
+    purpose: 'Your data is combined with others and anonymized to identify trends, gaps, and improvement opportunities. No individual is identifiable.',
+    defaultState: 'Pending',
+    canWithdraw: true,
+  },
+];
+
+function generateConsentRecords(traineeIndex: number): ConsentRecord[] {
+  const consentVersion = 'v1.0';
+  const baseDate = '2025-01-20';
+  const withdrawDate = '2025-08-05';
+  return consentCategories.map((cat, i) => {
+    // Most trainees have given consent; some have pending or withdrawn
+    const stateRoll = (traineeIndex + i) % 5;
+    const status: ConsentState = stateRoll === 0 ? 'Withdrawn' : stateRoll === 1 && i >= 2 ? 'Pending' : 'Given';
+    return {
+      type: cat.type,
+      status,
+      date: status === 'Withdrawn' ? withdrawDate : baseDate,
+      version: consentVersion,
+    };
+  });
+}
+
 function generateTrainees(): Trainee[] {
   const trainees: Trainee[] = [];
   const providers = [
@@ -310,6 +448,8 @@ function generateTrainees(): Trainee[] {
 
     const followUps = makeFollowUps(baseSalary || 0, placed, relevant);
 
+    const isCertified = Math.random() > 0.1;
+
     const score = Math.round(
       40 +
         (placed ? 20 : 0) +
@@ -335,7 +475,7 @@ function generateTrainees(): Trainee[] {
       providerName: provider.name,
       cohort,
       certification: `${course} Certificate`,
-      certified: Math.random() > 0.1,
+      certified: isCertified,
       employmentStatus: status,
       jobRole: placed ? jobRoles[i % jobRoles.length] : null,
       industry: placed ? industries[i % industries.length] : null,
@@ -360,6 +500,15 @@ function generateTrainees(): Trainee[] {
         { factor: 'Market Alignment', weight: 10, score: Math.min(100, Math.round((skills.filter(s => !skillGaps.includes(s)).length / skills.length) * 80 + (hasGap ? 0 : 20))), label: 'Alignment with local job market' },
       ],
       warnings: [],
+      trainingStatus: isCertified ? 'Certified' : placed ? 'Completed' : Math.random() > 0.1 ? 'Completed' : i % 7 === 0 ? 'Dropped Out' : i % 5 === 0 ? 'In Training' : 'Enrolled',
+      dateOfBirth: `${2000 + i % 6}-0${(i % 9) + 1}-${String(5 + (i % 20)).padStart(2, '0')}`,
+      phone: `+91-${String(90000 + i).slice(0, 5)}-${String(10000 + i * 37).slice(0, 5)}`,
+      email: `${name.toLowerCase().replace(/\s+/g, '.')}@demo.example`,
+      institution: ['Govt Polytechnic', 'ITI Training Centre', 'Skill Development Institute'][i % 3],
+      trainingCentre: `${provider.name} — ${districts[districtIdx]} Centre`,
+      startDate: '2025-01-15',
+      completionDate: '2025-04-15',
+      consentRecords: generateConsentRecords(i),
     };
 
     trainee.timeline = makeTimeline(trainee);
@@ -748,3 +897,74 @@ export const auditLogs: AuditLog[] = [
   { id: 'A007', timestamp: '2026-09-12 17:40:33', actor: 'Admin (Central)', action: 'Generated Skill Passport QR', resource: 'T011 (Rahul Mehta)', status: 'Allowed', consentStatus: 'Consent Active' },
   { id: 'A008', timestamp: '2026-09-12 13:20:15', actor: 'Trainee (T008)', action: 'Withdrew consent for data sharing', resource: 'Own Profile', status: 'Allowed', consentStatus: 'Consent Withdrawn' },
 ];
+
+// ---------- Consent Categories ----------
+export { consentCategories };
+
+// ---------- Training Status helpers ----------
+export const trainingStatusColors: Record<TrainingStatus, string> = {
+  'Enrolled': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  'In Training': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'Completed': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'Dropped Out': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+  'Certified': 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+};
+
+export const followUpStatusColors: Record<FollowUpStatus, string> = {
+  'Pending': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'Scheduled': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  'Sent': 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300',
+  'Responded': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'No Response': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+  'Assisted': 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  'Completed': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+};
+
+// ---------- Extended KPIs ----------
+export const extendedKpis = {
+  trainingCompleted: trainees.filter((t) => t.trainingStatus === 'Completed' || t.trainingStatus === 'Certified').length,
+  certified: trainees.filter((t) => t.certified).length,
+  followUpsDue: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Pending' || f.status === 'Scheduled' || f.status === 'Sent').length, 0),
+  followUpsCompleted: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'Completed' || f.status === 'Responded').length, 0),
+  followUpsOverdue: trainees.reduce((sum, t) => sum + t.followUps.filter((f) => f.status === 'No Response' && !f.responded).length, 0),
+  consentRate: Math.round((trainees.filter((t) => t.consentRecords.filter((c) => c.status === 'Given').length >= 3).length / trainees.length) * 100),
+};
+
+// ---------- Provider Follow-Up Stats ----------
+export const providerFollowUpStats: ProviderFollowUpStat[] = providers.map((p) => {
+  const pTrainees = trainees.filter((t) => t.providerId === p.id);
+  const allFollowUps = pTrainees.flatMap((t) => t.followUps);
+  const due = allFollowUps.filter((f) => f.status === 'Pending' || f.status === 'Scheduled' || f.status === 'Sent').length;
+  const completed = allFollowUps.filter((f) => f.status === 'Completed' || f.status === 'Responded').length;
+  const noResp = allFollowUps.filter((f) => f.status === 'No Response').length;
+  const overdue = allFollowUps.filter((f) => f.status === 'No Response' && !f.responded).length;
+  const total = allFollowUps.length;
+  return {
+    providerId: p.id,
+    providerName: p.name,
+    totalTrainees: pTrainees.length,
+    followUpsDue: due,
+    followUpsCompleted: completed,
+    noResponse: noResp,
+    overdue,
+    responseRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+  };
+});
+
+// ---------- Follow-Up Methods (for display) ----------
+export const followUpMethodIcons: Record<FollowUpMethod, string> = {
+  'WhatsApp': 'WhatsApp',
+  'SMS': 'SMS',
+  'Email': 'Email',
+  'Phone Call': 'Phone Call',
+  'Assisted Follow-up': 'Assisted',
+};
+
+// ---------- CSV Import Sample Data ----------
+export const csvSampleData = `Trainee ID,Trainee Name,Programme,Course,Training Provider,Training Centre,District,State,Start Date,Completion Date,Skills Acquired,Certification Status
+SP-2025-00031,Ravi Deshmukh,DDU-GY,Data Analytics,TechSkill Academy,Pune Centre,Pune,Maharashtra,2025-06-01,2025-09-01,Python;SQL;Power BI,Certified
+SP-2025-00032,Anita Kulkarni,DDU-GY,Full Stack Web Dev,Digital India Training Centre,Hyderabad Centre,Hyderabad,Telangana,2025-06-01,2025-09-01,React;Node.js;JavaScript,Completed
+SP-2025-00033,Manoj Reddy,PMKVY,Digital Marketing,SkillBridge Institute,Bengaluru Centre,Bengaluru,Karnataka,2025-06-15,2025-09-15,SEO;Social Media;Content Marketing,Pending
+SP-2025-00034,Sneha Rao,PMKVY,Cloud Computing,FutureTech Learning Hub,Chennai Centre,Chennai,Tamil Nadu,2025-07-01,2025-10-01,AWS;Docker;Kubernetes,In Training
+SP-2025-00035,Invalid Row,DDU-GY,,TechSkill Academy,,Pune,,2025-06-01,,Python,
+SP-2025-00036,Kavya Sharma,DDU-GY,AI & ML Fundamentals,TechSkill Academy,Pune Centre,Indore,Madhya Pradesh,2025-07-15,2025-10-15,Machine Learning;Python;TensorFlow,Certified`;

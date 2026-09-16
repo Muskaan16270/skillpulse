@@ -3,14 +3,17 @@ import {
   Award, Briefcase, TrendingUp, Clock, FileCheck,
   CheckCircle2, XCircle, AlertTriangle, BadgeCheck,
   GraduationCap, MapPin, IndianRupee, Calendar, Edit3,
+  User, ShieldCheck, History, Share2,
 } from 'lucide-react';
 import { Card, SectionTitle, Badge, EvidenceBadge, ProgressBar } from '@/components/ui';
 import { KPICard } from '@/components/ui/KPICard';
 import { useTrainee } from '@/context/TraineeContext';
 import { UpdateOutcomeModal } from '@/pages/trainee/UpdateOutcomeModal';
 import { FollowUpTimeline } from '@/pages/trainee/FollowUpTimeline';
+import { trainingStatusColors } from '@/data/mockData';
+import type { TraineePageKey } from '@/components/TraineeSidebar';
 
-export function TraineeDashboard({ traineeId }: { traineeId: string }) {
+export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string; onNavigate?: (page: TraineePageKey) => void }) {
   const { trainee, outcomeUpdate } = useTrainee();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -24,6 +27,10 @@ export function TraineeDashboard({ traineeId }: { traineeId: string }) {
 
   const respondedCount = trainee.followUps.filter((f) => f.responded).length;
   const completedFollowUps = trainee.followUps.length;
+
+  const givenConsents = trainee.consentRecords.filter((c) => c.status === 'Given').length;
+  const totalConsents = trainee.consentRecords.length;
+  const consentRate = Math.round((givenConsents / totalConsents) * 100);
 
   return (
     <div className="space-y-6">
@@ -73,6 +80,57 @@ export function TraineeDashboard({ traineeId }: { traineeId: string }) {
           icon={<Clock className="h-5 w-5" />}
           color={respondedCount >= 3 ? 'emerald' : 'amber'}
         />
+      </div>
+
+      {/* Quick Actions */}
+      <Card className="p-5">
+        <SectionTitle title="Quick Actions" subtitle="Jump to common tasks" icon={<Share2 className="h-5 w-5" />} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <QuickAction icon={<User className="h-5 w-5" />} label="View Profile" onClick={() => onNavigate?.('profile')} />
+          <QuickAction icon={<GraduationCap className="h-5 w-5" />} label="View Training" onClick={() => onNavigate?.('profile')} />
+          <QuickAction icon={<ShieldCheck className="h-5 w-5" />} label="Give / Manage Consent" onClick={() => onNavigate?.('privacy')} />
+          <QuickAction icon={<Edit3 className="h-5 w-5" />} label="Submit Follow-up" onClick={() => setShowUpdateModal(true)} />
+          <QuickAction icon={<History className="h-5 w-5" />} label="Follow-up History" onClick={() => onNavigate?.('dashboard')} />
+          <QuickAction icon={<Briefcase className="h-5 w-5" />} label="Update Outcome" onClick={() => setShowUpdateModal(true)} />
+        </div>
+      </Card>
+
+      {/* Training Status & Consent Summary */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card className="p-5">
+          <SectionTitle title="Training Status" icon={<GraduationCap className="h-5 w-5" />} />
+          <div className="flex items-center justify-between">
+            <div>
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${trainingStatusColors[trainee.trainingStatus]}`}>
+                {trainee.trainingStatus}
+              </span>
+              <p className="mt-2 text-sm text-gray-500">{trainee.courseName}</p>
+              <p className="text-xs text-gray-400">{trainee.providerName} • {trainee.trainingCentre}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Certificate</p>
+              <Badge color={trainee.certified ? 'emerald' : 'amber'}>{trainee.certified ? 'Certified' : 'Pending'}</Badge>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <SectionTitle title="Consent Status" icon={<ShieldCheck className="h-5 w-5" />} />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{givenConsents}/{totalConsents}</p>
+              <p className="text-xs text-gray-500">Consents given</p>
+            </div>
+            <div className="flex-1 ml-4">
+              <ProgressBar value={consentRate} color={consentRate >= 80 ? 'emerald' : consentRate >= 50 ? 'amber' : 'rose'} showLabel />
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate?.('privacy')}
+            className="mt-3 flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" /> Manage consent settings
+          </button>
+        </Card>
       </div>
 
       {/* Training & Certification */}
@@ -246,5 +304,17 @@ function DetailRow({ label, value, icon }: { label: string; value: string; icon?
         {value}
       </span>
     </div>
+  );
+}
+
+function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 p-3 text-center transition hover:border-brand-300 hover:bg-brand-50 dark:border-gray-700 dark:hover:border-brand-700 dark:hover:bg-brand-900/20"
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-900/40 dark:text-brand-400">{icon}</span>
+      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
+    </button>
   );
 }
