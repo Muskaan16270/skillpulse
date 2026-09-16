@@ -1,0 +1,750 @@
+export type EvidenceState =
+  | 'Self-Reported'
+  | 'Evidence-Supported'
+  | 'Employer-Verified'
+  | 'Under Review'
+  | 'Disputed'
+  | 'Closed';
+
+export interface FollowUp {
+  period: string;
+  days: number;
+  employed: boolean;
+  salary: number | null;
+  relevant: boolean;
+  retained: boolean;
+  livelihoodStatus: string;
+  evidence: EvidenceState;
+  responded: boolean;
+}
+
+export interface TimelineEvent {
+  id: string;
+  stage: 'Training' | 'Certification' | 'Job Search' | 'Outcome' | 'Follow-up' | 'Retention' | 'Progression';
+  title: string;
+  description: string;
+  date: string;
+  evidence: EvidenceState;
+}
+
+export interface Trainee {
+  id: string;
+  unifiedId: string;
+  name: string;
+  age: number;
+  gender: string;
+  district: string;
+  state: string;
+  education: string;
+  skills: string[];
+  courseName: string;
+  providerId: string;
+  providerName: string;
+  cohort: string;
+  certification: string;
+  certified: boolean;
+  employmentStatus: 'Placed' | 'Self-Employed' | 'Apprenticeship' | 'Unplaced' | 'Unknown';
+  jobRole: string | null;
+  industry: string | null;
+  jobLocation: string | null;
+  joiningDate: string | null;
+  salary: number | null;
+  salaryRange: string | null;
+  jobRelevance: 'High' | 'Moderate' | 'Low' | null;
+  retentionMonths: number;
+  isRetained: boolean;
+  isApprenticeship: boolean;
+  isSelfEmployed: boolean;
+  evidence: EvidenceState;
+  followUps: FollowUp[];
+  timeline: TimelineEvent[];
+  skillReadinessScore: number;
+  skillReadinessBreakdown: { factor: string; weight: number; score: number; label: string }[];
+  warnings: string[];
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  district: string;
+  traineesTotal: number;
+  placementRate: number;
+  relevantEmploymentRate: number;
+  retentionRate: number;
+  evidenceCoverage: number;
+  skillRelevance: number;
+  avgWage: number;
+  cohortSize: number;
+  sampleSize: number;
+  coverageScore: number;
+  evidenceQuality: number;
+}
+
+export interface Intervention {
+  id: string;
+  problem: string;
+  diagnosis: string;
+  action: string;
+  owner: string;
+  targetMetric: string;
+  baseline: number;
+  target: number;
+  status: 'Proposed' | 'In Progress' | 'Completed';
+  date: string;
+  cohortApplied: string;
+  linkedCohort: string | null;
+}
+
+export interface CohortComparison {
+  metric: string;
+  previousCohort: string;
+  previousValue: number;
+  nextCohort: string;
+  nextValue: number;
+  intervention: string;
+  observedChange: number;
+  previousEvidenceCoverage: number;
+  nextEvidenceCoverage: number;
+  previousSampleSize: number;
+  nextSampleSize: number;
+}
+
+export interface EarlyWarning {
+  id: string;
+  traineeId: string;
+  traineeName: string;
+  type: 'Non-Placement Risk' | 'Low Follow-up Response' | 'Low Job Relevance' | 'Retention Risk' | 'Emerging Skill Gap' | 'Unusual Outcome' | 'Low Evidence Confidence' | 'Declining Retention';
+  severity: 'High' | 'Medium' | 'Low';
+  reason: string;
+  confidence: number;
+  recommendation: string;
+  insufficientEvidence: boolean;
+}
+
+export interface DistrictData {
+  district: string;
+  state: string;
+  highDemandSkills: string[];
+  trainingAvailable: string[];
+  shortages: string[];
+  employmentOutcome: number;
+  traineesTrained: number;
+  traineesPlaced: number;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  resource: string;
+  status: 'Allowed' | 'Denied';
+  consentStatus: string;
+}
+
+// ---------- Evidence state metadata ----------
+export const evidenceColors: Record<EvidenceState, string> = {
+  'Self-Reported': 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  'Evidence-Supported': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  'Employer-Verified': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'Under Review': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'Disputed': 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  'Closed': 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-500',
+};
+
+export const evidenceIcons: Record<EvidenceState, string> = {
+  'Self-Reported': 'Self-Reported',
+  'Evidence-Supported': 'Evidence-Supported',
+  'Employer-Verified': 'SIMULATED',
+  'Under Review': 'Under Review',
+  'Disputed': 'Disputed',
+  'Closed': 'Closed',
+};
+
+// ---------- Trainees ----------
+const traineeNames = [
+  'Aarav Sharma', 'Priya Patel', 'Rohan Verma', 'Ananya Reddy', 'Karthik Nair',
+  'Meera Iyer', 'Vikram Singh', 'Divya Gupta', 'Arjun Kumar', 'Sneha Joshi',
+  'Rahul Mehta', 'Pooja Desai', 'Sanjay Rao', 'Kavya Krishnan', 'Aditya Yadav',
+  'Isha Agarwal', 'Nikhil Saxena', 'Tanvi Bhat', 'Manish Pandey', 'Ritu Malhotra',
+  'Saurabh Tiwari', 'Nisha Nair', 'Gaurav Mishra', 'Falguni Shah', 'Yash Rathore',
+  'Deepika Pillai', 'Rajesh Khanna', 'Aishwarya Menon', 'Tarun Kapoor', 'Shreya Bhatnagar',
+];
+
+const districts = ['Pune', 'Hyderabad', 'Bengaluru', 'Chennai', 'Indore', 'Jaipur', 'Lucknow', 'Bhopal'];
+const states = ['Maharashtra', 'Telangana', 'Karnataka', 'Tamil Nadu', 'Madhya Pradesh', 'Rajasthan', 'Uttar Pradesh', 'Madhya Pradesh'];
+const courses = ['Data Analytics', 'Full Stack Web Dev', 'Digital Marketing', 'AI & ML Fundamentals', 'Cloud Computing'];
+const industries = ['IT Services', 'E-commerce', 'Banking & Finance', 'Manufacturing', 'Healthcare', 'Retail'];
+const jobRoles = ['Junior Data Analyst', 'Frontend Developer', 'SEO Specialist', 'ML Trainee', 'Cloud Associate', 'Operations Executive', 'Customer Support', 'Field Sales Executive'];
+const allSkills = ['Python', 'SQL', 'Machine Learning', 'Excel', 'Power BI', 'Cloud (AWS)', 'React', 'Node.js', 'Digital Marketing', 'SEO', 'Data Visualization', 'Tableau'];
+const skillGaps = ['Cloud (AWS)', 'Power BI', 'Tableau', 'Communication Skills'];
+
+function makeFollowUps(baseSalary: number, placed: boolean, relevant: boolean): FollowUp[] {
+  const periods = [
+    { period: '30 Days', days: 30 },
+    { period: '90 Days', days: 90 },
+    { period: '180 Days', days: 180 },
+    { period: '12 Months', days: 365 },
+  ];
+  const evidences: EvidenceState[] = ['Self-Reported', 'Evidence-Supported', 'Employer-Verified', 'Evidence-Supported'];
+
+  return periods.map((p, i) => {
+    const dropOff = i >= 2 && Math.random() < 0.15;
+    const stillEmployed = placed && !dropOff;
+    const salaryGrowth = stillEmployed ? Math.round(baseSalary * (1 + i * 0.05)) : null;
+    return {
+      period: p.period,
+      days: p.days,
+      employed: stillEmployed,
+      salary: salaryGrowth,
+      relevant: stillEmployed ? relevant && Math.random() > 0.2 : false,
+      retained: stillEmployed && i >= 2,
+      livelihoodStatus: stillEmployed ? (relevant ? 'Relevant Employment' : 'Employed (Low Relevance)') : 'Seeking Work',
+      evidence: evidences[i],
+      responded: Math.random() > 0.15,
+    };
+  });
+}
+
+function makeTimeline(trainee: Partial<Trainee>): TimelineEvent[] {
+  return [
+    {
+      id: '1',
+      stage: 'Training',
+      title: 'Enrolled in ' + (trainee.courseName || 'Course'),
+      description: `Started training at ${trainee.providerName}`,
+      date: '2025-01-15',
+      evidence: 'Evidence-Supported',
+    },
+    {
+      id: '2',
+      stage: 'Certification',
+      title: trainee.certified ? 'Certification Completed' : 'Certification Pending',
+      description: trainee.certification || 'Certification',
+      date: '2025-04-20',
+      evidence: trainee.certified ? 'Employer-Verified' : 'Under Review',
+    },
+    {
+      id: '3',
+      stage: 'Job Search',
+      title: trainee.employmentStatus === 'Unplaced' ? 'Job Search Ongoing' : 'Job Search Initiated',
+      description: trainee.employmentStatus === 'Unplaced' ? 'Actively seeking employment through district employment exchange' : 'Applied to roles matching training profile',
+      date: '2025-04-25',
+      evidence: 'Self-Reported',
+    },
+    {
+      id: '4',
+      stage: 'Outcome',
+      title: trainee.employmentStatus === 'Placed' ? 'Placement Recorded' : trainee.employmentStatus === 'Self-Employed' ? 'Self-Employment Started' : trainee.employmentStatus === 'Apprenticeship' ? 'Apprenticeship Began' : 'Seeking Employment',
+      description: trainee.jobRole ? `${trainee.jobRole} at ${trainee.industry}` : 'No placement yet',
+      date: '2025-05-10',
+      evidence: trainee.evidence || 'Self-Reported',
+    },
+    {
+      id: '5',
+      stage: 'Follow-up',
+      title: '30-Day Follow-up',
+      description: 'Initial employment verification',
+      date: '2025-06-10',
+      evidence: 'Evidence-Supported',
+    },
+    {
+      id: '6',
+      stage: 'Retention',
+      title: trainee.isRetained ? '6-Month Retention Confirmed' : 'Retention Pending',
+      description: trainee.isRetained ? `Retained for ${trainee.retentionMonths} months` : 'Follow-up in progress',
+      date: '2025-11-10',
+      evidence: trainee.isRetained ? 'Employer-Verified' : 'Under Review',
+    },
+    {
+      id: '7',
+      stage: 'Progression',
+      title: 'Career Progression Check',
+      description: trainee.isRetained ? 'Monitoring for promotion/salary growth' : 'Awaiting stability',
+      date: '2026-05-10',
+      evidence: 'Self-Reported',
+    },
+  ];
+}
+
+function generateTrainees(): Trainee[] {
+  const trainees: Trainee[] = [];
+  const providers = [
+    { id: 'P01', name: 'TechSkill Academy' },
+    { id: 'P02', name: 'Digital India Training Centre' },
+    { id: 'P03', name: 'SkillBridge Institute' },
+    { id: 'P04', name: 'FutureTech Learning Hub' },
+  ];
+  const cohorts = ['Cohort 2025-A', 'Cohort 2025-B', 'Cohort 2025-C'];
+
+  for (let i = 0; i < 30; i++) {
+    const name = traineeNames[i];
+    const districtIdx = i % districts.length;
+    const provider = providers[i % providers.length];
+    const course = courses[i % courses.length];
+    const cohort = cohorts[i % cohorts.length];
+
+    const placed = Math.random() > 0.18;
+    const selfEmployed = !placed && Math.random() > 0.6;
+    const apprenticeship = !placed && !selfEmployed && Math.random() > 0.5;
+    const unplaced = !placed && !selfEmployed && !apprenticeship;
+    const unknown = false;
+
+    const status: Trainee['employmentStatus'] = placed ? 'Placed' : selfEmployed ? 'Self-Employed' : apprenticeship ? 'Apprenticeship' : unplaced ? 'Unplaced' : 'Unknown';
+
+    const baseSalary = placed ? 12000 + Math.round(Math.random() * 18000) : selfEmployed ? 8000 + Math.round(Math.random() * 12000) : apprenticeship ? 5000 + Math.round(Math.random() * 5000) : null;
+
+    const relevant = placed ? Math.random() > 0.3 : false;
+    const jobRelevance: Trainee['jobRelevance'] = placed ? (relevant ? (Math.random() > 0.4 ? 'High' : 'Moderate') : 'Low') : null;
+
+    const skills = [...allSkills].sort(() => Math.random() - 0.5).slice(0, 3 + Math.floor(Math.random() * 3));
+    const hasGap = Math.random() > 0.5;
+
+    const retentionMonths = placed ? Math.random() > 0.35 ? 6 + Math.floor(Math.random() * 6) : Math.floor(Math.random() * 4) : 0;
+    const isRetained = placed && retentionMonths >= 6;
+
+    const evidenceOptions: EvidenceState[] = ['Self-Reported', 'Evidence-Supported', 'Employer-Verified', 'Under Review'];
+    const evidence = placed ? evidenceOptions[Math.floor(Math.random() * evidenceOptions.length)] : 'Self-Reported';
+
+    const salaryRange = baseSalary ? `₹${baseSalary.toLocaleString('en-IN')} – ₹${(baseSalary + 5000).toLocaleString('en-IN')}` : null;
+
+    const followUps = makeFollowUps(baseSalary || 0, placed, relevant);
+
+    const score = Math.round(
+      40 +
+        (placed ? 20 : 0) +
+        (relevant ? 15 : 0) +
+        (isRetained ? 10 : 0) +
+        (evidence === 'Employer-Verified' ? 8 : evidence === 'Evidence-Supported' ? 5 : 0) +
+        (hasGap ? -5 : 5) +
+        Math.random() * 5
+    );
+
+    const trainee: Trainee = {
+      id: `T${String(i + 1).padStart(3, '0')}`,
+      unifiedId: `SP-2025-${String(i + 1).padStart(5, '0')}`,
+      name,
+      age: 19 + Math.floor(Math.random() * 12),
+      gender: i % 2 === 0 ? 'Male' : 'Female',
+      district: districts[districtIdx],
+      state: states[districtIdx],
+      education: ['12th Pass', 'Graduate', 'Diploma', 'ITI'][i % 4],
+      skills,
+      courseName: course,
+      providerId: provider.id,
+      providerName: provider.name,
+      cohort,
+      certification: `${course} Certificate`,
+      certified: Math.random() > 0.1,
+      employmentStatus: status,
+      jobRole: placed ? jobRoles[i % jobRoles.length] : null,
+      industry: placed ? industries[i % industries.length] : null,
+      jobLocation: placed ? districts[districtIdx] : null,
+      joiningDate: placed ? '2025-05-15' : null,
+      salary: baseSalary,
+      salaryRange,
+      jobRelevance,
+      retentionMonths,
+      isRetained,
+      isApprenticeship: apprenticeship,
+      isSelfEmployed: selfEmployed,
+      evidence,
+      followUps,
+      timeline: [],
+      skillReadinessScore: Math.min(100, Math.max(20, score)),
+      skillReadinessBreakdown: [
+        { factor: 'Skill Alignment', weight: 25, score: Math.min(100, Math.round((skills.filter(s => !skillGaps.includes(s)).length / skills.length) * 100)), label: 'How well trainee skills match market demand' },
+        { factor: 'Evidence Confidence', weight: 20, score: evidence === 'Employer-Verified' ? 95 : evidence === 'Evidence-Supported' ? 75 : evidence === 'Under Review' ? 40 : 20, label: 'Strength of outcome evidence' },
+        { factor: 'Employment Relevance', weight: 25, score: relevant ? (jobRelevance === 'High' ? 90 : jobRelevance === 'Moderate' ? 65 : 30) : placed ? 25 : 10, label: 'Relevance of employment to training' },
+        { factor: 'Retention/Progression', weight: 20, score: isRetained ? 85 : placed ? 35 : 10, label: 'Employment duration and growth' },
+        { factor: 'Market Alignment', weight: 10, score: Math.min(100, Math.round((skills.filter(s => !skillGaps.includes(s)).length / skills.length) * 80 + (hasGap ? 0 : 20))), label: 'Alignment with local job market' },
+      ],
+      warnings: [],
+    };
+
+    trainee.timeline = makeTimeline(trainee);
+
+    // Warnings
+    if (!placed) trainee.warnings.push('Non-Placement Risk');
+    if (placed && !relevant) trainee.warnings.push('Low Job Relevance');
+    if (placed && !isRetained && retentionMonths < 3) trainee.warnings.push('Retention Risk');
+    if (followUps.some((f) => !f.responded)) trainee.warnings.push('Low Follow-up Response');
+    if (hasGap) trainee.warnings.push('Emerging Skill Gap');
+
+    trainees.push(trainee);
+  }
+  return trainees;
+}
+
+export const trainees: Trainee[] = generateTrainees();
+
+// ---------- KPIs ----------
+export const kpis = {
+  totalTrainees: trainees.length,
+  employmentRate: Math.round((trainees.filter((t) => t.employmentStatus === 'Placed' || t.employmentStatus === 'Self-Employed' || t.employmentStatus === 'Apprenticeship').length / trainees.length) * 100),
+  relevantEmploymentRate: Math.round((trainees.filter((t) => t.jobRelevance === 'High' || t.jobRelevance === 'Moderate').length / trainees.length) * 100),
+  retentionRate: Math.round((trainees.filter((t) => t.isRetained).length / trainees.filter((t) => t.employmentStatus === 'Placed').length) * 100),
+  evidenceCoverage: Math.round((trainees.filter((t) => t.evidence !== 'Self-Reported').length / trainees.length) * 100),
+  selfEmploymentRate: Math.round((trainees.filter((t) => t.isSelfEmployed).length / trainees.length) * 100),
+  apprenticeshipRate: Math.round((trainees.filter((t) => t.isApprenticeship).length / trainees.length) * 100),
+  skillGaps: 4,
+  traineesPlaced: trainees.filter((t) => t.employmentStatus === 'Placed').length,
+  traineesRelevant: trainees.filter((t) => t.jobRelevance === 'High' || t.jobRelevance === 'Moderate').length,
+  traineesRetained: trainees.filter((t) => t.isRetained).length,
+  traineesEvidence: trainees.filter((t) => t.evidence !== 'Self-Reported').length,
+  traineesSelfEmployed: trainees.filter((t) => t.isSelfEmployed).length,
+  traineesApprenticeship: trainees.filter((t) => t.isApprenticeship).length,
+  followUpCoverage: Math.round((trainees.filter((t) => t.followUps.every((f) => f.responded)).length / trainees.length) * 100),
+};
+
+// ---------- Outcome Funnel ----------
+export const outcomeFunnel = [
+  { stage: 'Enrolled', value: 100, count: trainees.length },
+  { stage: 'Certified', value: 91, count: trainees.filter((t) => t.certified).length },
+  { stage: 'Initial Placement', value: 82, count: trainees.filter((t) => t.employmentStatus === 'Placed').length },
+  { stage: 'Relevant Employment', value: 57, count: trainees.filter((t) => t.jobRelevance === 'High' || t.jobRelevance === 'Moderate').length },
+  { stage: '6-Month Retention', value: 44, count: trainees.filter((t) => t.isRetained).length },
+  { stage: 'Evidence-Supported', value: 38, count: trainees.filter((t) => t.evidence === 'Evidence-Supported' || t.evidence === 'Employer-Verified').length },
+  { stage: 'Progression Observed', value: 22, count: Math.round(trainees.filter((t) => t.isRetained).length * 0.5) },
+];
+
+// ---------- Non-placement reasons ----------
+export const nonPlacementReasons = [
+  { reason: 'Skill Mismatch', count: 5, percentage: 28 },
+  { reason: 'Salary Mismatch', count: 4, percentage: 22 },
+  { reason: 'Lack of Vacancies', count: 3, percentage: 17 },
+  { reason: 'Interview Readiness', count: 3, percentage: 17 },
+  { reason: 'Location Constraint', count: 2, percentage: 11 },
+  { reason: 'Other', count: 1, percentage: 5 },
+];
+
+// ---------- Wage progression ----------
+export const wageProgression = [
+  { month: 'Month 1', wage: 18500, market: 20000 },
+  { month: 'Month 3', wage: 19000, market: 21000 },
+  { month: 'Month 6', wage: 21000, market: 23000 },
+  { month: 'Month 9', wage: 22500, market: 24500 },
+  { month: 'Month 12', wage: 25000, market: 27000 },
+];
+
+// ---------- Skills vs Demand ----------
+export const skillsVsDemand = [
+  { skill: 'Python', training: 85, demand: 90 },
+  { skill: 'SQL', training: 78, demand: 82 },
+  { skill: 'Machine Learning', training: 65, demand: 75 },
+  { skill: 'Cloud (AWS)', training: 20, demand: 88 },
+  { skill: 'Power BI', training: 15, demand: 72 },
+  { skill: 'Tableau', training: 10, demand: 60 },
+  { skill: 'React', training: 55, demand: 65 },
+  { skill: 'Digital Marketing', training: 70, demand: 58 },
+];
+
+// ---------- Employment & Retention trend ----------
+export const employmentRetentionTrend = [
+  { month: 'May', employment: 82, retention: 100 },
+  { month: 'Jun', employment: 80, retention: 95 },
+  { month: 'Jul', employment: 78, retention: 88 },
+  { month: 'Aug', employment: 76, retention: 82 },
+  { month: 'Sep', employment: 73, retention: 75 },
+  { month: 'Oct', employment: 70, retention: 68 },
+  { month: 'Nov', employment: 68, retention: 62 },
+  { month: 'Dec', employment: 65, retention: 57 },
+];
+
+// ---------- Skill Gap AI ----------
+export const skillGapData = {
+  taughtSkills: ['Python', 'SQL', 'Machine Learning', 'React', 'Digital Marketing'],
+  demandedSkills: ['Python', 'SQL', 'Machine Learning', 'Cloud (AWS)', 'Power BI', 'Tableau', 'React', 'Digital Marketing'],
+  missingSkills: [
+    { skill: 'Cloud (AWS)', demandLevel: 88, trainingLevel: 20, severity: 'Critical' },
+    { skill: 'Power BI', demandLevel: 72, trainingLevel: 15, severity: 'High' },
+    { skill: 'Tableau', demandLevel: 60, trainingLevel: 10, severity: 'Medium' },
+  ],
+  emergingSkills: [
+    { skill: 'Generative AI', trend: 'Rapidly Growing', relevance: 92 },
+    { skill: 'DevOps', trend: 'Growing', relevance: 78 },
+    { skill: 'Cybersecurity', trend: 'Growing', relevance: 85 },
+  ],
+  matchingSkills: [
+    { skill: 'Python', trainingLevel: 85, demandLevel: 90, alignment: 94 },
+    { skill: 'SQL', trainingLevel: 78, demandLevel: 82, alignment: 95 },
+    { skill: 'Machine Learning', trainingLevel: 65, demandLevel: 75, alignment: 87 },
+    { skill: 'React', trainingLevel: 55, demandLevel: 65, alignment: 85 },
+    { skill: 'Digital Marketing', trainingLevel: 70, demandLevel: 58, alignment: 100 },
+  ],
+  recommendationExplanations: [
+    { recommendation: 'Introduce a 40-hour Cloud (AWS) practical module covering EC2, S3, and IAM fundamentals.', explanation: 'Cloud (AWS) appears in 88% of job postings but only 20% of training curricula. Adding this module directly addresses the largest identified gap with the highest potential impact on relevant employment.' },
+    { recommendation: 'Add Power BI dashboard creation exercises using real-world datasets.', explanation: 'Power BI demand is at 72% but training coverage is only 15%. Practical exercises would close this gap and improve data visualization employability.' },
+    { recommendation: 'Incorporate a Tableau data visualization sprint in the final 2 weeks.', explanation: 'Tableau shows 60% demand with 10% training coverage. A focused sprint is efficient because Tableau shares concepts with Power BI training.' },
+    { recommendation: 'Add communication and interview readiness workshops.', explanation: 'Non-placement reasons include interview readiness (17%). Soft skills workshops address this without requiring curriculum restructuring.' },
+  ],
+  insufficientEvidenceNote: 'For 2 districts (Indore, Jaipur), job posting data is older than 6 months. Confidence in demand estimates for these districts is reduced. Recommendations for those areas are marked as tentative.',
+  alignmentPercentage: 64,
+  recommendations: [
+    'Introduce a 40-hour Cloud (AWS) practical module covering EC2, S3, and IAM fundamentals.',
+    'Add Power BI dashboard creation exercises using real-world datasets.',
+    'Incorporate a Tableau data visualization sprint in the final 2 weeks.',
+    'Add communication and interview readiness workshops.',
+  ],
+  curriculumSuggestions: [
+    'Replace 15% of theoretical ML content with Cloud labs.',
+    'Add a bi-weekly industry guest session on emerging tools.',
+    'Introduce a capstone project requiring Power BI + Cloud deployment.',
+  ],
+  aiConfidence: 82,
+  aiExplanation: 'Based on analysis of 240 job postings from 4 districts, cross-referenced with training curricula from 4 providers. Cloud (AWS) appears in 88% of postings but only 20% of curricula. Power BI shows 72% demand with 15% training coverage.',
+};
+
+// ---------- Providers ----------
+export const providers: Provider[] = [
+  {
+    id: 'P01', name: 'TechSkill Academy', district: 'Pune',
+    traineesTotal: 8, placementRate: 88, relevantEmploymentRate: 65, retentionRate: 50,
+    evidenceCoverage: 75, skillRelevance: 72, avgWage: 22000, cohortSize: 8, sampleSize: 7,
+    coverageScore: 88, evidenceQuality: 75,
+  },
+  {
+    id: 'P02', name: 'Digital India Training Centre', district: 'Hyderabad',
+    traineesTotal: 8, placementRate: 75, relevantEmploymentRate: 50, retentionRate: 38,
+    evidenceCoverage: 50, skillRelevance: 55, avgWage: 18000, cohortSize: 8, sampleSize: 6,
+    coverageScore: 75, evidenceQuality: 50,
+  },
+  {
+    id: 'P03', name: 'SkillBridge Institute', district: 'Bengaluru',
+    traineesTotal: 7, placementRate: 86, relevantEmploymentRate: 71, retentionRate: 57,
+    evidenceCoverage: 86, skillRelevance: 80, avgWage: 25000, cohortSize: 7, sampleSize: 7,
+    coverageScore: 100, evidenceQuality: 86,
+  },
+  {
+    id: 'P04', name: 'FutureTech Learning Hub', district: 'Chennai',
+    traineesTotal: 7, placementRate: 71, relevantEmploymentRate: 43, retentionRate: 29,
+    evidenceCoverage: 43, skillRelevance: 50, avgWage: 16000, cohortSize: 7, sampleSize: 5,
+    coverageScore: 71, evidenceQuality: 43,
+  },
+];
+
+// ---------- Interventions ----------
+export const interventions: Intervention[] = [
+  {
+    id: 'INT-001',
+    problem: 'Low relevant employment (57%)',
+    diagnosis: 'Curriculum lacks Power BI and Cloud modules which appear in 72-88% of local job postings. Trainees accept lower-relevance roles due to missing skills.',
+    action: 'Add Power BI practical module with real-world datasets',
+    owner: 'TechSkill Academy',
+    targetMetric: 'Relevant Employment Rate',
+    baseline: 57,
+    target: 70,
+    status: 'Completed',
+    date: '2025-06-15',
+    cohortApplied: 'Cohort 2025-A',
+    linkedCohort: 'Cohort 2025-B',
+  },
+  {
+    id: 'INT-002',
+    problem: 'Retention drop at 6 months (44%)',
+    diagnosis: 'Exit interviews indicate workplace adjustment issues and salary below market median. No mentorship support available post-placement.',
+    action: 'Launch mentorship and workplace adjustment support program',
+    owner: 'SkillBridge Institute',
+    targetMetric: '6-Month Retention Rate',
+    baseline: 44,
+    target: 60,
+    status: 'In Progress',
+    date: '2025-08-01',
+    cohortApplied: 'Cohort 2025-B',
+    linkedCohort: null,
+  },
+  {
+    id: 'INT-003',
+    problem: 'Emerging skill gap: Cloud (AWS)',
+    diagnosis: 'Cloud (AWS) appears in 88% of job postings but only 20% of curricula. Trainees lack foundational cloud skills required for most data/IT roles.',
+    action: 'Introduce 40-hour AWS fundamentals certification track',
+    owner: 'Digital India Training Centre',
+    targetMetric: 'Cloud Skill Coverage',
+    baseline: 20,
+    target: 65,
+    status: 'Proposed',
+    date: '2025-09-10',
+    cohortApplied: 'Cohort 2025-C',
+    linkedCohort: null,
+  },
+  {
+    id: 'INT-004',
+    problem: 'Low evidence coverage (38%)',
+    diagnosis: 'Only 38% of outcomes have evidence beyond self-report. Follow-up response rate at 85%. No employer verification workflow in place.',
+    action: 'Implement automated follow-up system with employer verification workflow',
+    owner: 'All Providers',
+    targetMetric: 'Evidence-Supported Outcome Rate',
+    baseline: 38,
+    target: 70,
+    status: 'In Progress',
+    date: '2025-07-20',
+    cohortApplied: 'Cohort 2025-B',
+    linkedCohort: null,
+  },
+];
+
+// ---------- Cohort Comparison ----------
+export const cohortComparisons: CohortComparison[] = [
+  {
+    metric: 'Relevant Employment Rate',
+    previousCohort: 'Cohort 2025-A',
+    previousValue: 57,
+    nextCohort: 'Cohort 2025-B',
+    nextValue: 68,
+    intervention: 'Added Power BI practical module',
+    observedChange: 11,
+    previousEvidenceCoverage: 38,
+    nextEvidenceCoverage: 52,
+    previousSampleSize: 10,
+    nextSampleSize: 10,
+  },
+  {
+    metric: 'Evidence-Supported Outcome Rate',
+    previousCohort: 'Cohort 2025-A',
+    previousValue: 38,
+    nextCohort: 'Cohort 2025-B',
+    nextValue: 52,
+    intervention: 'Automated follow-up + employer verification workflow',
+    observedChange: 14,
+    previousEvidenceCoverage: 38,
+    nextEvidenceCoverage: 52,
+    previousSampleSize: 10,
+    nextSampleSize: 10,
+  },
+  {
+    metric: 'Skill Alignment %',
+    previousCohort: 'Cohort 2025-A',
+    previousValue: 64,
+    nextCohort: 'Cohort 2025-B',
+    nextValue: 78,
+    intervention: 'Curriculum updated with Cloud + Power BI modules',
+    observedChange: 14,
+    previousEvidenceCoverage: 38,
+    nextEvidenceCoverage: 52,
+    previousSampleSize: 10,
+    nextSampleSize: 10,
+  },
+];
+
+// ---------- Early Warnings ----------
+export const earlyWarnings: EarlyWarning[] = trainees
+  .filter((t) => t.warnings.length > 0)
+  .slice(0, 12)
+  .map((t, i) => {
+    const type = t.warnings[0] as EarlyWarning['type'];
+    return {
+      id: `EW-${String(i + 1).padStart(3, '0')}`,
+      traineeId: t.id,
+      traineeName: t.name,
+      type,
+      severity: type === 'Non-Placement Risk' ? 'High' : type === 'Retention Risk' ? 'High' : type === 'Low Job Relevance' ? 'Medium' : type === 'Declining Retention' ? 'High' : type === 'Unusual Outcome' ? 'Medium' : type === 'Low Evidence Confidence' ? 'Medium' : 'Low',
+      reason: getWarningReason(type, t),
+      confidence: 60 + Math.floor(Math.random() * 35),
+      recommendation: getWarningRecommendation(type),
+      insufficientEvidence: Math.random() > 0.7,
+    };
+  });
+
+function getWarningReason(type: string, t: Trainee): string {
+  switch (type) {
+    case 'Non-Placement Risk':
+      return `Trainee ${t.name} has been certified but not placed after 60+ days. District ${t.district} shows limited vacancies in ${t.courseName}. 2 of 4 follow-ups unanswered.`;
+    case 'Low Follow-up Response':
+      return `${t.followUps.filter((f) => !f.responded).length} of 4 follow-up surveys unanswered. Cannot verify employment status.`;
+    case 'Low Job Relevance':
+      return `Placed as ${t.jobRole} in ${t.industry} but training was in ${t.courseName}. Skills match rate below 40%.`;
+    case 'Retention Risk':
+      return `Employment lasted only ${t.retentionMonths} months. Salary below district median. No progression observed.`;
+    case 'Emerging Skill Gap':
+      return `Training curriculum does not cover Cloud (AWS) or Power BI, which appear in 80%+ of local job postings.`;
+    case 'Unusual Outcome':
+      return `Employment outcome pattern is atypical: placed in an industry unrelated to training with a salary 40%+ below cohort median. Possible data quality issue or genuine mismatch.`;
+    case 'Low Evidence Confidence':
+      return `Outcome is self-reported only. No supporting documents uploaded. 0 of 4 follow-ups have evidence beyond self-report. Confidence in outcome is low.`;
+    case 'Declining Retention':
+      return `Retention trend is declining: employed at 30-day follow-up but not at 90-day follow-up. Salary dropped or became null. Indicates early job loss.`;
+    default:
+      return 'Insufficient evidence to determine cause.';
+  }
+}
+
+function getWarningRecommendation(type: string): string {
+  switch (type) {
+    case 'Non-Placement Risk':
+      return 'Connect to district employment exchange; consider bridge internship or apprenticeship.';
+    case 'Low Follow-up Response':
+      return 'Switch to phone-based follow-up; offer small incentive for survey completion.';
+    case 'Low Job Relevance':
+      return 'Recommend upskilling in relevant domain; explore internal transfer options with employer.';
+    case 'Retention Risk':
+      return 'Assign workplace mentor; check for salary parity; explore alternative placement.';
+    case 'Emerging Skill Gap':
+      return 'Add missing skills to next cohort curriculum; offer bridging module to current trainees.';
+    case 'Unusual Outcome':
+      return 'Verify outcome with employer; check if data entry error; confirm trainee actually employed in stated role.';
+    case 'Low Evidence Confidence':
+      return 'Request evidence upload (offer letter, salary slip); schedule employer verification call.';
+    case 'Declining Retention':
+      return 'Contact trainee to understand reason for leaving; offer re-placement support; check for systemic issues with employer.';
+    default:
+      return 'Gather more data before recommending action.';
+  }
+}
+
+// ---------- District Intelligence ----------
+export const districtData: DistrictData[] = [
+  {
+    district: 'Pune', state: 'Maharashtra',
+    highDemandSkills: ['Python', 'Cloud (AWS)', 'Power BI', 'React', 'DevOps'],
+    trainingAvailable: ['Python', 'React', 'Digital Marketing', 'SQL'],
+    shortages: ['Cloud (AWS)', 'Power BI', 'DevOps'],
+    employmentOutcome: 82, traineesTrained: 8, traineesPlaced: 7,
+  },
+  {
+    district: 'Hyderabad', state: 'Telangana',
+    highDemandSkills: ['Python', 'Machine Learning', 'Cloud (AWS)', 'Cybersecurity', 'SQL'],
+    trainingAvailable: ['Python', 'SQL', 'Digital Marketing'],
+    shortages: ['Cloud (AWS)', 'Machine Learning', 'Cybersecurity'],
+    employmentOutcome: 75, traineesTrained: 8, traineesPlaced: 6,
+  },
+  {
+    district: 'Bengaluru', state: 'Karnataka',
+    highDemandSkills: ['React', 'Node.js', 'Cloud (AWS)', 'Python', 'Tableau'],
+    trainingAvailable: ['React', 'Node.js', 'Python', 'SQL', 'Machine Learning'],
+    shortages: ['Cloud (AWS)', 'Tableau'],
+    employmentOutcome: 86, traineesTrained: 7, traineesPlaced: 6,
+  },
+  {
+    district: 'Chennai', state: 'Tamil Nadu',
+    highDemandSkills: ['Python', 'Cloud (AWS)', 'Data Visualization', 'Excel', 'Power BI'],
+    trainingAvailable: ['Python', 'Excel', 'Digital Marketing'],
+    shortages: ['Cloud (AWS)', 'Power BI', 'Data Visualization'],
+    employmentOutcome: 71, traineesTrained: 7, traineesPlaced: 5,
+  },
+  {
+    district: 'Indore', state: 'Madhya Pradesh',
+    highDemandSkills: ['Digital Marketing', 'SEO', 'Excel', 'Power BI', 'Python'],
+    trainingAvailable: ['Digital Marketing', 'SEO', 'Excel'],
+    shortages: ['Power BI', 'Python'],
+    employmentOutcome: 68, traineesTrained: 0, traineesPlaced: 0,
+  },
+  {
+    district: 'Jaipur', state: 'Rajasthan',
+    highDemandSkills: ['Python', 'SQL', 'Cloud (AWS)', 'React', 'Power BI'],
+    trainingAvailable: ['Python', 'SQL'],
+    shortages: ['Cloud (AWS)', 'React', 'Power BI'],
+    employmentOutcome: 64, traineesTrained: 0, traineesPlaced: 0,
+  },
+];
+
+// ---------- Audit Logs ----------
+export const auditLogs: AuditLog[] = [
+  { id: 'A001', timestamp: '2026-09-15 10:23:14', actor: 'Admin (State Mission)', action: 'Viewed trainee profile', resource: 'T003 (Priya Patel)', status: 'Allowed', consentStatus: 'Consent Active' },
+  { id: 'A002', timestamp: '2026-09-15 09:45:02', actor: 'Provider (TechSkill Academy)', action: 'Uploaded evidence document', resource: 'T007 (Vikram Singh)', status: 'Allowed', consentStatus: 'Consent Active' },
+  { id: 'A003', timestamp: '2026-09-14 16:30:55', actor: 'Admin (District Pune)', action: 'Exported aggregated analytics', resource: 'Pune District Report', status: 'Allowed', consentStatus: 'Anonymized' },
+  { id: 'A004', timestamp: '2026-09-14 14:12:30', actor: 'Provider (FutureTech)', action: 'Attempted to view trainee from other provider', resource: 'T005 (Karthik Nair)', status: 'Denied', consentStatus: 'No Cross-Provider Access' },
+  { id: 'A005', timestamp: '2026-09-13 11:08:22', actor: 'Trainee (T003)', action: 'With consent for employment data', resource: 'Own Profile', status: 'Allowed', consentStatus: 'Consent Granted' },
+  { id: 'A006', timestamp: '2026-09-13 08:55:10', actor: 'System', action: 'Auto-anonymized data for public dashboard', resource: 'State-level Dashboard', status: 'Allowed', consentStatus: 'Anonymized' },
+  { id: 'A007', timestamp: '2026-09-12 17:40:33', actor: 'Admin (Central)', action: 'Generated Skill Passport QR', resource: 'T011 (Rahul Mehta)', status: 'Allowed', consentStatus: 'Consent Active' },
+  { id: 'A008', timestamp: '2026-09-12 13:20:15', actor: 'Trainee (T008)', action: 'Withdrew consent for data sharing', resource: 'Own Profile', status: 'Allowed', consentStatus: 'Consent Withdrawn' },
+];
