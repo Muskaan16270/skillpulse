@@ -23,7 +23,7 @@ import { TraineeProvider } from '@/context/TraineeContext';
 import { TraineeDashboard } from '@/pages/trainee/TraineeDashboard';
 import { TraineeProfile } from '@/pages/trainee/TraineeProfile';
 import { TraineePrivacy } from '@/pages/trainee/TraineePrivacy';
-import { trainees } from '@/data/mockData';
+import { trainees, type EarlyWarning as EarlyWarningType } from '@/data/mockData';
 
 type Mode = 'admin' | 'trainee';
 
@@ -32,6 +32,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>('overview');
   const [traineePage, setTraineePage] = useState<TraineePageKey>('dashboard');
   const [traineeId, setTraineeId] = useState<string | null>(null);
+  const [pendingWarning, setPendingWarning] = useState<EarlyWarningType | null>(null);
 
   const handleTraineeLogin = (id: string) => {
     setTraineeId(id);
@@ -101,8 +102,8 @@ function App() {
       case 'autopsy': return <OutcomeAutopsy />;
       case 'skillgap': return <SkillGapAI />;
       case 'retention': return <RetentionProgression />;
-      case 'earlywarning': return <EarlyWarning />;
-      case 'interventions': return <Interventions />;
+      case 'earlywarning': return <EarlyWarning onCreateIntervention={(w) => { setPendingWarning(w); setCurrentPage('interventions'); }} />;
+      case 'interventions': return <Interventions pendingFromWarning={pendingWarning} />;
       case 'nextcohort': return <NextCohortLearning />;
       case 'providers': return <Providers />;
       case 'district': return <DistrictIntelligence />;

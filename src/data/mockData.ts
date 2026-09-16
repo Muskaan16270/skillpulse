@@ -166,6 +166,12 @@ export interface Intervention {
   date: string;
   cohortApplied: string;
   linkedCohort: string | null;
+  interventionType?: string;
+  assignedPerson?: string;
+  result?: string;
+  linkedWarningId?: string;
+  traineeId?: string;
+  traineeName?: string;
 }
 
 export interface CohortComparison {
@@ -186,12 +192,14 @@ export interface EarlyWarning {
   id: string;
   traineeId: string;
   traineeName: string;
-  type: 'Non-Placement Risk' | 'Low Follow-up Response' | 'Low Job Relevance' | 'Retention Risk' | 'Emerging Skill Gap' | 'Unusual Outcome' | 'Low Evidence Confidence' | 'Declining Retention';
+  type: 'Non-Placement Risk' | 'Low Follow-up Response' | 'Low Job Relevance' | 'Retention Risk' | 'Emerging Skill Gap' | 'Unusual Outcome' | 'Low Evidence Confidence' | 'Declining Retention' | 'No Follow-up Response' | 'Employment Loss' | 'Low Retention' | 'Skill Mismatch' | 'Pending Verification';
   severity: 'High' | 'Medium' | 'Low';
+  riskLevel: 'Low Risk' | 'Medium Risk' | 'Needs Attention';
   reason: string;
   confidence: number;
   recommendation: string;
   insufficientEvidence: boolean;
+  interventionType?: string;
 }
 
 export interface DistrictData {
@@ -1308,6 +1316,60 @@ export const interventions: Intervention[] = [
     date: '2025-07-20',
     cohortApplied: 'Cohort 2025-B',
     linkedCohort: null,
+    interventionType: 'Request Evidence',
+    assignedPerson: 'Priya Patel (Verification Officer)',
+    result: 'Evidence coverage improved from 38% to 52%. 3 trainees submitted documents.',
+  },
+  {
+    id: 'INT-005',
+    problem: 'Skill mismatch — trainee working in unrelated field',
+    diagnosis: 'Trainee T005 (Karthik Nair) trained in Data Analytics but placed as Customer Support. Skills match rate: 35%.',
+    action: 'Recommend additional training in data analytics; connect to relevant job openings',
+    owner: 'TechSkill Academy',
+    targetMetric: 'Relevant Employment Rate',
+    baseline: 35,
+    target: 70,
+    status: 'In Progress',
+    date: '2026-09-05',
+    cohortApplied: 'Cohort 2025-B',
+    linkedCohort: null,
+    interventionType: 'Recommend Additional Training',
+    assignedPerson: 'Rahul Mehta (Placement Officer)',
+    result: 'Enrolled in Power BI bridging module. 2 relevant job interviews scheduled.',
+  },
+  {
+    id: 'INT-006',
+    problem: 'No follow-up response from 3 trainees',
+    diagnosis: 'Trainees T008, T012, T015 have not responded to 2+ follow-up surveys. Employment status unknown for 30+ days.',
+    action: 'Initiate assisted follow-up via field staff; attempt phone contact',
+    owner: 'Digital India Training Centre',
+    targetMetric: 'Follow-up Response Rate',
+    baseline: 50,
+    target: 85,
+    status: 'In Progress',
+    date: '2026-09-08',
+    cohortApplied: 'Cohort 2025-B',
+    linkedCohort: null,
+    interventionType: 'Assisted Follow-up',
+    assignedPerson: 'Sneha Joshi (Field Coordinator)',
+    result: '1 of 3 trainees contacted via phone. 2 pending address visits.',
+  },
+  {
+    id: 'INT-007',
+    problem: 'Employment loss — trainee lost job after 90 days',
+    diagnosis: 'Trainee T010 (Sneha Joshi) was employed at 30-day follow-up but reported unemployed at 90-day follow-up. Employment ended.',
+    action: 'Show matching job opportunities; connect to district employment exchange',
+    owner: 'SkillBridge Institute',
+    targetMetric: 'Re-placement Rate',
+    baseline: 0,
+    target: 100,
+    status: 'Proposed',
+    date: '2026-09-12',
+    cohortApplied: 'Cohort 2025-B',
+    linkedCohort: null,
+    interventionType: 'Show Job Opportunities',
+    assignedPerson: 'Arjun Kumar (Placement Officer)',
+    result: 'Pending — job matching in progress.',
   },
 ];
 
@@ -1355,23 +1417,73 @@ export const cohortComparisons: CohortComparison[] = [
 ];
 
 // ---------- Early Warnings ----------
+const severityToRisk = (severity: 'High' | 'Medium' | 'Low'): 'Low Risk' | 'Medium Risk' | 'Needs Attention' => {
+  if (severity === 'High') return 'Needs Attention';
+  if (severity === 'Medium') return 'Medium Risk';
+  return 'Low Risk';
+};
+
+const warningInterventionMap: Record<string, string> = {
+  'Non-Placement Risk': 'Show Job Opportunities',
+  'Low Follow-up Response': 'Assisted Follow-up',
+  'No Follow-up Response': 'Assisted Follow-up',
+  'Low Job Relevance': 'Recommend Additional Training',
+  'Skill Mismatch': 'Recommend Additional Training',
+  'Retention Risk': 'Workplace Mentorship',
+  'Low Retention': 'Workplace Mentorship',
+  'Declining Retention': 'Re-placement Support',
+  'Employment Loss': 'Show Job Opportunities',
+  'Emerging Skill Gap': 'Curriculum Update',
+  'Unusual Outcome': 'Outcome Verification',
+  'Low Evidence Confidence': 'Request Evidence',
+  'Pending Verification': 'Request Evidence',
+};
+
 export const earlyWarnings: EarlyWarning[] = trainees
   .filter((t) => t.warnings.length > 0)
   .slice(0, 12)
   .map((t, i) => {
     const type = t.warnings[0] as EarlyWarning['type'];
+    const severity: 'High' | 'Medium' | 'Low' = type === 'Non-Placement Risk' ? 'High' : type === 'Retention Risk' ? 'High' : type === 'Low Job Relevance' ? 'Medium' : type === 'Declining Retention' ? 'High' : type === 'Unusual Outcome' ? 'Medium' : type === 'Low Evidence Confidence' ? 'Medium' : 'Low';
     return {
       id: `EW-${String(i + 1).padStart(3, '0')}`,
       traineeId: t.id,
       traineeName: t.name,
       type,
-      severity: type === 'Non-Placement Risk' ? 'High' : type === 'Retention Risk' ? 'High' : type === 'Low Job Relevance' ? 'Medium' : type === 'Declining Retention' ? 'High' : type === 'Unusual Outcome' ? 'Medium' : type === 'Low Evidence Confidence' ? 'Medium' : 'Low',
+      severity,
+      riskLevel: severityToRisk(severity),
       reason: getWarningReason(type, t),
-      confidence: 60 + Math.floor(Math.random() * 35),
+      confidence: 60 + Math.floor(Math.abs(Math.sin(i * 13)) * 35),
       recommendation: getWarningRecommendation(type),
-      insufficientEvidence: Math.random() > 0.7,
+      insufficientEvidence: Math.abs(Math.cos(i * 7)) > 0.7,
+      interventionType: warningInterventionMap[type] || 'Review Required',
     };
   });
+
+// ---------- Additional synthetic early warnings (new types) ----------
+const additionalWarnings: EarlyWarning[] = trainees
+  .filter((t) => t.warnings.length === 0)
+  .slice(0, 8)
+  .map((t, i) => {
+    const types: EarlyWarning['type'][] = ['No Follow-up Response', 'Employment Loss', 'Low Retention', 'Skill Mismatch', 'Pending Verification'];
+    const type = types[i % types.length];
+    const severity: 'High' | 'Medium' | 'Low' = type === 'Employment Loss' ? 'High' : type === 'No Follow-up Response' ? 'Medium' : type === 'Pending Verification' ? 'Low' : 'Medium';
+    return {
+      id: `EW-${String(13 + i).padStart(3, '0')}`,
+      traineeId: t.id,
+      traineeName: t.name,
+      type,
+      severity,
+      riskLevel: severityToRisk(severity),
+      reason: getWarningReason(type, t),
+      confidence: 55 + Math.floor(Math.abs(Math.sin(i * 11)) * 40),
+      recommendation: getWarningRecommendation(type),
+      insufficientEvidence: Math.abs(Math.cos(i * 5)) > 0.6,
+      interventionType: warningInterventionMap[type] || 'Review Required',
+    };
+  });
+
+export const allEarlyWarnings: EarlyWarning[] = [...earlyWarnings, ...additionalWarnings];
 
 function getWarningReason(type: string, t: Trainee): string {
   switch (type) {
@@ -1379,18 +1491,28 @@ function getWarningReason(type: string, t: Trainee): string {
       return `Trainee ${t.name} has been certified but not placed after 60+ days. District ${t.district} shows limited vacancies in ${t.courseName}. 2 of 4 follow-ups unanswered.`;
     case 'Low Follow-up Response':
       return `${t.followUps.filter((f) => !f.responded).length} of 4 follow-up surveys unanswered. Cannot verify employment status.`;
+    case 'No Follow-up Response':
+      return `Trainee ${t.name} has not responded to ${t.followUps.filter((f) => !f.responded).length} of 4 follow-up surveys. No contact established in 30+ days. Employment status unknown.`;
     case 'Low Job Relevance':
       return `Placed as ${t.jobRole} in ${t.industry} but training was in ${t.courseName}. Skills match rate below 40%.`;
+    case 'Skill Mismatch':
+      return `Trainee ${t.name} was trained in ${t.courseName} but is working in an unrelated field. Skills from training are not being used on the job. Match rate: 35%.`;
     case 'Retention Risk':
       return `Employment lasted only ${t.retentionMonths} months. Salary below district median. No progression observed.`;
+    case 'Low Retention':
+      return `Trainee ${t.name} has been employed for only ${t.retentionMonths} months. Retention below 6-month benchmark. Risk of early job loss.`;
+    case 'Declining Retention':
+      return `Retention trend is declining: employed at 30-day follow-up but not at 90-day follow-up. Salary dropped or became null. Indicates early job loss.`;
+    case 'Employment Loss':
+      return `Trainee ${t.name} was employed at 30-day follow-up but reported as unemployed at 90-day follow-up. Employment has ended. Needs re-placement support.`;
     case 'Emerging Skill Gap':
       return `Training curriculum does not cover Cloud (AWS) or Power BI, which appear in 80%+ of local job postings.`;
     case 'Unusual Outcome':
       return `Employment outcome pattern is atypical: placed in an industry unrelated to training with a salary 40%+ below cohort median. Possible data quality issue or genuine mismatch.`;
     case 'Low Evidence Confidence':
       return `Outcome is self-reported only. No supporting documents uploaded. 0 of 4 follow-ups have evidence beyond self-report. Confidence in outcome is low.`;
-    case 'Declining Retention':
-      return `Retention trend is declining: employed at 30-day follow-up but not at 90-day follow-up. Salary dropped or became null. Indicates early job loss.`;
+    case 'Pending Verification':
+      return `Trainee ${t.name}'s outcome is awaiting verification. Evidence documents have been requested but not yet submitted. Verification pending for 15+ days.`;
     default:
       return 'Insufficient evidence to determine cause.';
   }
@@ -1402,18 +1524,28 @@ function getWarningRecommendation(type: string): string {
       return 'Connect to district employment exchange; consider bridge internship or apprenticeship.';
     case 'Low Follow-up Response':
       return 'Switch to phone-based follow-up; offer small incentive for survey completion.';
+    case 'No Follow-up Response':
+      return 'Initiate assisted follow-up via field staff; attempt phone contact; visit trainee address if needed.';
     case 'Low Job Relevance':
       return 'Recommend upskilling in relevant domain; explore internal transfer options with employer.';
+    case 'Skill Mismatch':
+      return 'Recommend additional training in relevant skills; explore job opportunities matching current training profile.';
     case 'Retention Risk':
       return 'Assign workplace mentor; check for salary parity; explore alternative placement.';
+    case 'Low Retention':
+      return 'Assign workplace mentor; schedule check-in calls; monitor for signs of job dissatisfaction.';
+    case 'Declining Retention':
+      return 'Contact trainee to understand reason for leaving; offer re-placement support; check for systemic issues with employer.';
+    case 'Employment Loss':
+      return 'Show matching job opportunities; connect to district employment exchange; offer re-placement support.';
     case 'Emerging Skill Gap':
       return 'Add missing skills to next cohort curriculum; offer bridging module to current trainees.';
     case 'Unusual Outcome':
       return 'Verify outcome with employer; check if data entry error; confirm trainee actually employed in stated role.';
     case 'Low Evidence Confidence':
       return 'Request evidence upload (offer letter, salary slip); schedule employer verification call.';
-    case 'Declining Retention':
-      return 'Contact trainee to understand reason for leaving; offer re-placement support; check for systemic issues with employer.';
+    case 'Pending Verification':
+      return 'Request evidence documents (offer letter, salary slip); send reminder to trainee; schedule verification call.';
     default:
       return 'Gather more data before recommending action.';
   }
