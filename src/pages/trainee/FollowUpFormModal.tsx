@@ -265,7 +265,7 @@ export function FollowUpFormModal({ open, onClose, periodLabel }: FollowUpFormMo
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { value: 'yes', label: 'Yes, I need more training' },
-                  { value: 'no', label: 'No, I'm comfortable' },
+                  { value: 'no', label: "No, I'm comfortable" },
                 ] as const).map((opt) => (
                   <button
                     key={opt.value}
