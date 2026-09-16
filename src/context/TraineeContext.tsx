@@ -60,6 +60,8 @@ export interface OutcomeUpdate {
 
 export interface OutcomeUpdateRecord extends OutcomeUpdate {
   submittedAt: string;
+  verifierNotes?: string;
+  reviewedAt?: string;
 }
 
 interface TraineeContextValue {
@@ -67,7 +69,7 @@ interface TraineeContextValue {
   trainee: Trainee;
   outcomeUpdate: OutcomeUpdateRecord | null;
   updateOutcome: (update: OutcomeUpdate) => void;
-  updateVerificationStatus: (status: VerificationStatus) => void;
+  updateVerificationStatus: (status: VerificationStatus, notes?: string) => void;
   uploadEvidence: (fileName: string, fileType: string) => void;
   followUpUpdates: Record<string, OutcomeUpdateRecord>;
   followUps: FollowUp[];
@@ -151,8 +153,13 @@ export function TraineeProvider({ traineeId, children }: { traineeId: string; ch
     setOutcomeUpdate({ ...update, submittedAt: new Date().toLocaleString('en-IN') });
   };
 
-  const updateVerificationStatus = (status: VerificationStatus) => {
-    setOutcomeUpdate((prev) => prev ? { ...prev, verificationStatus: status } : prev);
+  const updateVerificationStatus = (status: VerificationStatus, notes?: string) => {
+    setOutcomeUpdate((prev) => prev ? {
+      ...prev,
+      verificationStatus: status,
+      verifierNotes: notes !== undefined ? notes : prev.verifierNotes,
+      reviewedAt: status === 'Verified' || status === 'Needs Update' || status === 'Under Review' ? new Date().toLocaleString('en-IN') : prev.reviewedAt,
+    } : prev);
   };
 
   const uploadEvidence = (fileName: string, fileType: string) => {

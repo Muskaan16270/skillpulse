@@ -699,6 +699,530 @@ export const skillGapData = {
   aiExplanation: 'Based on analysis of 240 job postings from 4 districts, cross-referenced with training curricula from 4 providers. Cloud (AWS) appears in 88% of postings but only 20% of curricula. Power BI shows 72% demand with 15% training coverage.',
 };
 
+// ---------- Target Job Profiles (for Skill Gap Analysis) ----------
+export interface TargetJobProfile {
+  id: string;
+  title: string;
+  industry: string;
+  requiredSkills: { skill: string; importance: 'Critical' | 'Important' | 'Preferred'; demandLevel: number }[];
+  avgSalaryRange: string;
+  description: string;
+}
+
+export const targetJobProfiles: TargetJobProfile[] = [
+  {
+    id: 'job-01',
+    title: 'Junior Data Analyst',
+    industry: 'IT Services',
+    avgSalaryRange: '₹18,000 – ₹28,000',
+    description: 'Entry-level data analysis role requiring SQL, Python, and visualization skills.',
+    requiredSkills: [
+      { skill: 'Python', importance: 'Critical', demandLevel: 90 },
+      { skill: 'SQL', importance: 'Critical', demandLevel: 88 },
+      { skill: 'Excel', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Power BI', importance: 'Important', demandLevel: 72 },
+      { skill: 'Tableau', importance: 'Important', demandLevel: 60 },
+      { skill: 'Data Visualization', importance: 'Important', demandLevel: 70 },
+    ],
+  },
+  {
+    id: 'job-02',
+    title: 'Frontend Developer',
+    industry: 'IT Services',
+    avgSalaryRange: '₹22,000 – ₹35,000',
+    description: 'Web development role focused on React and modern JavaScript frameworks.',
+    requiredSkills: [
+      { skill: 'React', importance: 'Critical', demandLevel: 88 },
+      { skill: 'Node.js', importance: 'Important', demandLevel: 65 },
+      { skill: 'Python', importance: 'Preferred', demandLevel: 40 },
+      { skill: 'Cloud (AWS)', importance: 'Important', demandLevel: 70 },
+    ],
+  },
+  {
+    id: 'job-03',
+    title: 'ML Trainee',
+    industry: 'IT Services',
+    avgSalaryRange: '₹20,000 – ₹32,000',
+    description: 'Machine learning role requiring Python, ML fundamentals, and data skills.',
+    requiredSkills: [
+      { skill: 'Python', importance: 'Critical', demandLevel: 92 },
+      { skill: 'Machine Learning', importance: 'Critical', demandLevel: 85 },
+      { skill: 'SQL', importance: 'Important', demandLevel: 75 },
+      { skill: 'Cloud (AWS)', importance: 'Important', demandLevel: 80 },
+      { skill: 'Data Visualization', importance: 'Preferred', demandLevel: 55 },
+    ],
+  },
+  {
+    id: 'job-04',
+    title: 'Cloud Associate',
+    industry: 'IT Services',
+    avgSalaryRange: '₹25,000 – ₹40,000',
+    description: 'Cloud infrastructure role requiring AWS knowledge and scripting skills.',
+    requiredSkills: [
+      { skill: 'Cloud (AWS)', importance: 'Critical', demandLevel: 95 },
+      { skill: 'Python', importance: 'Important', demandLevel: 70 },
+      { skill: 'SQL', importance: 'Preferred', demandLevel: 50 },
+      { skill: 'Node.js', importance: 'Preferred', demandLevel: 45 },
+    ],
+  },
+  {
+    id: 'job-05',
+    title: 'Digital Marketing Executive',
+    industry: 'E-commerce',
+    avgSalaryRange: '₹15,000 – ₹25,000',
+    description: 'Digital marketing role requiring SEO, content, and analytics skills.',
+    requiredSkills: [
+      { skill: 'Digital Marketing', importance: 'Critical', demandLevel: 90 },
+      { skill: 'SEO', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Excel', importance: 'Important', demandLevel: 70 },
+      { skill: 'Power BI', importance: 'Preferred', demandLevel: 40 },
+    ],
+  },
+  {
+    id: 'job-06',
+    title: 'SEO Specialist',
+    industry: 'E-commerce',
+    avgSalaryRange: '₹18,000 – ₹30,000',
+    description: 'Search engine optimization role requiring SEO and content analysis skills.',
+    requiredSkills: [
+      { skill: 'SEO', importance: 'Critical', demandLevel: 92 },
+      { skill: 'Digital Marketing', importance: 'Critical', demandLevel: 80 },
+      { skill: 'Excel', importance: 'Important', demandLevel: 65 },
+      { skill: 'Data Visualization', importance: 'Preferred', demandLevel: 45 },
+    ],
+  },
+];
+
+// ---------- Skill proficiency levels (synthetic per-trainee) ----------
+export function getTraineeSkillProficiency(traineeSkills: string[]): Record<string, number> {
+  const proficiency: Record<string, number> = {};
+  for (const skill of traineeSkills) {
+    const baseScore = 55 + Math.floor(Math.abs(Math.sin(skill.length * 7)) * 35);
+    proficiency[skill] = Math.min(95, baseScore);
+  }
+  return proficiency;
+}
+
+// ---------- Training recommendations for missing skills ----------
+export interface TrainingRecommendation {
+  skill: string;
+  courseName: string;
+  duration: string;
+  provider: string;
+  format: 'Online' | 'Hybrid' | 'Self-paced';
+  estimatedCost: string;
+  reason: string;
+}
+
+export const trainingRecommendations: Record<string, TrainingRecommendation> = {
+  'Cloud (AWS)': {
+    skill: 'Cloud (AWS)',
+    courseName: 'AWS Cloud Practitioner Essentials',
+    duration: '40 hours (2 weeks)',
+    provider: 'AWS Training & Certification',
+    format: 'Online',
+    estimatedCost: 'Free (AWS Skill Builder)',
+    reason: 'AWS appears in 88% of IT job postings. Foundational cloud knowledge is essential for most data and development roles.',
+  },
+  'Power BI': {
+    skill: 'Power BI',
+    courseName: 'Microsoft Power BI Data Analyst',
+    duration: '30 hours (2 weeks)',
+    provider: 'Microsoft Learn',
+    format: 'Self-paced',
+    estimatedCost: 'Free (Microsoft Learn)',
+    reason: 'Power BI is demanded in 72% of data analyst roles. Dashboard creation skills complement existing SQL and Excel knowledge.',
+  },
+  'Tableau': {
+    skill: 'Tableau',
+    courseName: 'Tableau Fundamentals',
+    duration: '20 hours (1 week)',
+    provider: 'Tableau Public Resources',
+    format: 'Online',
+    estimatedCost: 'Free (Tableau Public)',
+    reason: 'Tableau appears in 60% of data visualization roles. Concepts overlap with Power BI, making it quick to learn.',
+  },
+  'Data Visualization': {
+    skill: 'Data Visualization',
+    courseName: 'Data Visualization Best Practices',
+    duration: '15 hours (1 week)',
+    provider: 'Google Data Studio',
+    format: 'Self-paced',
+    estimatedCost: 'Free',
+    reason: 'Data visualization is a cross-cutting skill demanded in 70% of analyst roles. Builds on existing Excel and SQL skills.',
+  },
+  'Node.js': {
+    skill: 'Node.js',
+    courseName: 'Node.js Backend Development',
+    duration: '35 hours (3 weeks)',
+    provider: 'freeCodeCamp',
+    format: 'Online',
+    estimatedCost: 'Free',
+    reason: 'Node.js complements React skills for full-stack development roles. Demanded in 65% of frontend developer postings.',
+  },
+  'SEO': {
+    skill: 'SEO',
+    courseName: 'SEO Fundamentals Certification',
+    duration: '25 hours (2 weeks)',
+    provider: 'HubSpot Academy',
+    format: 'Self-paced',
+    estimatedCost: 'Free',
+    reason: 'SEO is critical for digital marketing roles, appearing in 85% of job postings in e-commerce and marketing sectors.',
+  },
+  'Machine Learning': {
+    skill: 'Machine Learning',
+    courseName: 'Machine Learning Specialization',
+    duration: '60 hours (4 weeks)',
+    provider: 'Coursera (Stanford)',
+    format: 'Online',
+    estimatedCost: 'Free (Financial Aid)',
+    reason: 'ML skills are demanded in 75% of AI/ML trainee roles. Builds on Python and data fundamentals.',
+  },
+  'Excel': {
+    skill: 'Excel',
+    courseName: 'Advanced Excel for Data Analysis',
+    duration: '15 hours (1 week)',
+    provider: 'ExcelIsFun',
+    format: 'Self-paced',
+    estimatedCost: 'Free (YouTube)',
+    reason: 'Excel is a foundational skill for 85% of data roles. Advanced functions (VLOOKUP, PivotTables) are frequently tested in interviews.',
+  },
+  'React': {
+    skill: 'React',
+    courseName: 'React Development Path',
+    duration: '40 hours (3 weeks)',
+    provider: 'Meta (Coursera)',
+    format: 'Online',
+    estimatedCost: 'Free (Financial Aid)',
+    reason: 'React is demanded in 88% of frontend developer roles. Core skill for modern web development.',
+  },
+  'Python': {
+    skill: 'Python',
+    courseName: 'Python for Data Science',
+    duration: '30 hours (2 weeks)',
+    provider: 'IBM (Coursera)',
+    format: 'Online',
+    estimatedCost: 'Free (Financial Aid)',
+    reason: 'Python is the most demanded programming skill, appearing in 90% of data and ML roles.',
+  },
+  'SQL': {
+    skill: 'SQL',
+    courseName: 'SQL for Data Science',
+    duration: '20 hours (1 week)',
+    provider: 'DataCamp',
+    format: 'Self-paced',
+    estimatedCost: 'Free (First Course)',
+    reason: 'SQL is critical for 88% of data analyst roles. Database querying is a core requirement.',
+  },
+  'Digital Marketing': {
+    skill: 'Digital Marketing',
+    courseName: 'Digital Marketing Fundamentals',
+    duration: '30 hours (2 weeks)',
+    provider: 'Google Digital Garage',
+    format: 'Online',
+    estimatedCost: 'Free',
+    reason: 'Digital marketing is demanded in 90% of marketing roles. Covers SEO, SEM, and social media marketing.',
+  },
+};
+
+// ---------- Synthetic Job Listings (for AI-Assisted Job Matching) ----------
+export interface JobListing {
+  id: string;
+  title: string;
+  employer: string;
+  location: string;
+  salaryRange: string;
+  requiredSkills: { skill: string; importance: 'Critical' | 'Important' | 'Preferred'; demandLevel: number }[];
+  qualification: string;
+  trainingPreferred: string[];
+  jobType: 'Full-time' | 'Part-time' | 'Contract' | 'Apprenticeship';
+  postedDate: string;
+  description: string;
+}
+
+export const jobListings: JobListing[] = [
+  {
+    id: 'JOB-001',
+    title: 'Junior Data Analyst',
+    employer: 'TCS Digital',
+    location: 'Pune',
+    salaryRange: '₹18,000 – ₹28,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Data Analytics', 'Full Stack Web Dev'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-10',
+    description: 'Entry-level data analyst role working with SQL, Python, and BI tools to generate business insights.',
+    requiredSkills: [
+      { skill: 'Python', importance: 'Critical', demandLevel: 90 },
+      { skill: 'SQL', importance: 'Critical', demandLevel: 88 },
+      { skill: 'Excel', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Power BI', importance: 'Important', demandLevel: 72 },
+      { skill: 'Data Visualization', importance: 'Important', demandLevel: 70 },
+    ],
+  },
+  {
+    id: 'JOB-002',
+    title: 'Frontend Developer',
+    employer: 'Wipro Technologies',
+    location: 'Bengaluru',
+    salaryRange: '₹22,000 – ₹35,000',
+    qualification: 'B.Tech / B.E. / Any Graduate',
+    trainingPreferred: ['Full Stack Web Dev'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-12',
+    description: 'Build responsive web applications using React and modern JavaScript frameworks.',
+    requiredSkills: [
+      { skill: 'React', importance: 'Critical', demandLevel: 88 },
+      { skill: 'Node.js', importance: 'Important', demandLevel: 65 },
+      { skill: 'Cloud (AWS)', importance: 'Important', demandLevel: 70 },
+      { skill: 'Python', importance: 'Preferred', demandLevel: 40 },
+    ],
+  },
+  {
+    id: 'JOB-003',
+    title: 'ML Trainee',
+    employer: 'Infosys AI Labs',
+    location: 'Hyderabad',
+    salaryRange: '₹20,000 – ₹32,000',
+    qualification: 'B.Tech / B.Sc / Any Graduate',
+    trainingPreferred: ['AI & ML Fundamentals', 'Data Analytics'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-08',
+    description: 'Work on machine learning models, data pipelines, and AI-driven solutions for enterprise clients.',
+    requiredSkills: [
+      { skill: 'Python', importance: 'Critical', demandLevel: 92 },
+      { skill: 'Machine Learning', importance: 'Critical', demandLevel: 85 },
+      { skill: 'SQL', importance: 'Important', demandLevel: 75 },
+      { skill: 'Cloud (AWS)', importance: 'Important', demandLevel: 80 },
+      { skill: 'Data Visualization', importance: 'Preferred', demandLevel: 55 },
+    ],
+  },
+  {
+    id: 'JOB-004',
+    title: 'Cloud Support Associate',
+    employer: 'AWS India',
+    location: 'Hyderabad',
+    salaryRange: '₹25,000 – ₹40,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Cloud Computing'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-14',
+    description: 'Provide technical support for AWS cloud infrastructure, troubleshoot customer issues.',
+    requiredSkills: [
+      { skill: 'Cloud (AWS)', importance: 'Critical', demandLevel: 95 },
+      { skill: 'Python', importance: 'Important', demandLevel: 70 },
+      { skill: 'SQL', importance: 'Preferred', demandLevel: 50 },
+    ],
+  },
+  {
+    id: 'JOB-005',
+    title: 'Digital Marketing Executive',
+    employer: 'Flipkart',
+    location: 'Bengaluru',
+    salaryRange: '₹15,000 – ₹25,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Digital Marketing'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-11',
+    description: 'Manage digital marketing campaigns, SEO optimization, and social media strategy for e-commerce.',
+    requiredSkills: [
+      { skill: 'Digital Marketing', importance: 'Critical', demandLevel: 90 },
+      { skill: 'SEO', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Excel', importance: 'Important', demandLevel: 70 },
+      { skill: 'Data Visualization', importance: 'Preferred', demandLevel: 45 },
+    ],
+  },
+  {
+    id: 'JOB-006',
+    title: 'SEO Specialist',
+    employer: 'Zomato',
+    location: 'Delhi NCR',
+    salaryRange: '₹18,000 – ₹30,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Digital Marketing'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-09',
+    description: 'Drive organic traffic growth through SEO strategies, keyword research, and content optimization.',
+    requiredSkills: [
+      { skill: 'SEO', importance: 'Critical', demandLevel: 92 },
+      { skill: 'Digital Marketing', importance: 'Critical', demandLevel: 80 },
+      { skill: 'Excel', importance: 'Important', demandLevel: 65 },
+    ],
+  },
+  {
+    id: 'JOB-007',
+    title: 'Data Analyst Apprentice',
+    employer: 'Accenture',
+    location: 'Pune',
+    salaryRange: '₹15,000 – ₹22,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Data Analytics'],
+    jobType: 'Apprenticeship',
+    postedDate: '2026-09-13',
+    description: 'Apprenticeship program for fresh graduates to learn data analytics on the job with mentorship.',
+    requiredSkills: [
+      { skill: 'SQL', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Excel', importance: 'Critical', demandLevel: 80 },
+      { skill: 'Python', importance: 'Important', demandLevel: 70 },
+      { skill: 'Power BI', importance: 'Preferred', demandLevel: 50 },
+    ],
+  },
+  {
+    id: 'JOB-008',
+    title: 'Operations Executive',
+    employer: 'Amazon India',
+    location: 'Chennai',
+    salaryRange: '₹16,000 – ₹24,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Data Analytics', 'Digital Marketing'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-07',
+    description: 'Manage daily operations, track KPIs using Excel and dashboards, and coordinate with teams.',
+    requiredSkills: [
+      { skill: 'Excel', importance: 'Critical', demandLevel: 85 },
+      { skill: 'SQL', importance: 'Important', demandLevel: 65 },
+      { skill: 'Data Visualization', importance: 'Important', demandLevel: 60 },
+      { skill: 'Power BI', importance: 'Preferred', demandLevel: 45 },
+    ],
+  },
+  {
+    id: 'JOB-009',
+    title: 'Full Stack Developer',
+    employer: 'Startup: TechVerse',
+    location: 'Bengaluru',
+    salaryRange: '₹28,000 – ₹45,000',
+    qualification: 'B.Tech / B.E. / MCA',
+    trainingPreferred: ['Full Stack Web Dev'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-15',
+    description: 'Join a fast-growing startup to build end-to-end web applications with React and Node.js.',
+    requiredSkills: [
+      { skill: 'React', importance: 'Critical', demandLevel: 90 },
+      { skill: 'Node.js', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Cloud (AWS)', importance: 'Important', demandLevel: 75 },
+      { skill: 'SQL', importance: 'Important', demandLevel: 65 },
+    ],
+  },
+  {
+    id: 'JOB-010',
+    title: 'Business Intelligence Analyst',
+    employer: 'Cognizant',
+    location: 'Hyderabad',
+    salaryRange: '₹22,000 – ₹35,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Data Analytics'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-06',
+    description: 'Create dashboards and reports using Power BI and Tableau to support business decision-making.',
+    requiredSkills: [
+      { skill: 'Power BI', importance: 'Critical', demandLevel: 88 },
+      { skill: 'SQL', importance: 'Critical', demandLevel: 82 },
+      { skill: 'Tableau', importance: 'Important', demandLevel: 70 },
+      { skill: 'Excel', importance: 'Important', demandLevel: 75 },
+      { skill: 'Python', importance: 'Preferred', demandLevel: 50 },
+    ],
+  },
+  {
+    id: 'JOB-011',
+    title: 'Marketing Analytics Trainee',
+    employer: 'Swiggy',
+    location: 'Bengaluru',
+    salaryRange: '₹16,000 – ₹24,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Digital Marketing', 'Data Analytics'],
+    jobType: 'Full-time',
+    postedDate: '2026-09-10',
+    description: 'Analyze marketing campaign performance, SEO metrics, and customer data to drive growth.',
+    requiredSkills: [
+      { skill: 'Digital Marketing', importance: 'Important', demandLevel: 75 },
+      { skill: 'SEO', importance: 'Important', demandLevel: 70 },
+      { skill: 'Excel', importance: 'Critical', demandLevel: 80 },
+      { skill: 'Data Visualization', importance: 'Important', demandLevel: 65 },
+    ],
+  },
+  {
+    id: 'JOB-012',
+    title: 'Cloud Operations Trainee',
+    employer: 'Microsoft India',
+    location: 'Hyderabad',
+    salaryRange: '₹20,000 – ₹30,000',
+    qualification: 'Any Graduate',
+    trainingPreferred: ['Cloud Computing'],
+    jobType: 'Apprenticeship',
+    postedDate: '2026-09-12',
+    description: 'Entry-level cloud operations role with structured training in Azure and AWS environments.',
+    requiredSkills: [
+      { skill: 'Cloud (AWS)', importance: 'Critical', demandLevel: 85 },
+      { skill: 'Python', importance: 'Important', demandLevel: 65 },
+      { skill: 'SQL', importance: 'Preferred', demandLevel: 45 },
+    ],
+  },
+];
+
+// ---------- Job Match Result Interface ----------
+export interface JobMatchResult {
+  job: JobListing;
+  matchingSkills: { skill: string; proficiency: number; importance: string }[];
+  missingSkills: { skill: string; importance: string; demandLevel: number }[];
+  matchPercentage: number;
+  locationMatch: boolean;
+  qualificationMatch: boolean;
+  trainingMatch: boolean;
+}
+
+export function calculateJobMatch(
+  traineeId: string,
+  job: JobListing
+): JobMatchResult {
+  const trainee = trainees.find((t) => t.id === traineeId) || trainees[0];
+  const proficiency = getTraineeSkillProficiency(trainee.skills);
+
+  const matching: JobMatchResult['matchingSkills'] = [];
+  const missing: JobMatchResult['missingSkills'] = [];
+
+  for (const req of job.requiredSkills) {
+    const prof = proficiency[req.skill];
+    if (prof !== undefined) {
+      matching.push({ skill: req.skill, proficiency: prof, importance: req.importance });
+    } else {
+      missing.push({ skill: req.skill, importance: req.importance, demandLevel: req.demandLevel });
+    }
+  }
+
+  // Weighted match percentage: critical skills weighted 3x, important 2x, preferred 1x
+  const weightMap = { Critical: 3, Important: 2, Preferred: 1 };
+  let totalWeight = 0;
+  let matchedWeight = 0;
+  for (const req of job.requiredSkills) {
+    const w = weightMap[req.importance];
+    totalWeight += w;
+    if (proficiency[req.skill] !== undefined) {
+      matchedWeight += w;
+    }
+  }
+  const matchPercentage = totalWeight > 0 ? Math.round((matchedWeight / totalWeight) * 100) : 0;
+
+  const locationMatch = trainee.district === job.location || true; // synthetic: show all locations
+  const qualificationMatch = job.qualification === 'Any Graduate' || true;
+  const trainingMatch = job.trainingPreferred.includes(trainee.courseName) || job.trainingPreferred.length === 0;
+
+  return {
+    job,
+    matchingSkills: matching.sort((a, b) => {
+      const order = { Critical: 0, Important: 1, Preferred: 2 };
+      return order[a.importance as keyof typeof order] - order[b.importance as keyof typeof order];
+    }),
+    missingSkills: missing.sort((a, b) => {
+      const order = { Critical: 0, Important: 1, Preferred: 2 };
+      return order[a.importance as keyof typeof order] - order[b.importance as keyof typeof order];
+    }),
+    matchPercentage,
+    locationMatch,
+    qualificationMatch,
+    trainingMatch,
+  };
+}
+
 // ---------- Providers ----------
 export const providers: Provider[] = [
   {

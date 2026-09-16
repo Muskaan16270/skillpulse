@@ -181,8 +181,16 @@ export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string;
           : 'border-l-gray-300'
         }`}>
           <div className="flex items-start justify-between">
-            <SectionTitle title="My Self-Reported Outcome" subtitle={`Submitted on ${outcomeUpdate.submittedAt}`} icon={<CheckCircle2 className="h-5 w-5" />} />
-            <VerificationBadge status={outcomeUpdate.verificationStatus} />
+            <SectionTitle title={outcomeUpdate.verificationStatus === 'Verified' ? 'My Verified Outcome' : 'My Self-Reported Outcome'} subtitle={`Submitted on ${outcomeUpdate.submittedAt}`} icon={<CheckCircle2 className="h-5 w-5" />} />
+            {outcomeUpdate.verificationStatus === 'Verified' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <CheckCircle2 className="h-3.5 w-3.5" /> VERIFIED
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-gray-800/50 dark:text-gray-400">
+                <FileText className="h-3.5 w-3.5" /> SELF-REPORTED
+              </span>
+            )}
           </div>
           <div className="mb-3">
             <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
@@ -262,6 +270,27 @@ export function TraineeDashboard({ traineeId, onNavigate }: { traineeId: string;
                 {outcomeUpdate.verificationStatus === 'Needs Update' && (
                   <span className="text-xs text-rose-600 dark:text-rose-400">Action required: please update your outcome</span>
                 )}
+              </div>
+            )}
+
+            {/* Verifier notes */}
+            {outcomeUpdate.verifierNotes && (
+              <div className={`mt-3 rounded-lg p-3 ${
+                outcomeUpdate.verificationStatus === 'Needs Update'
+                  ? 'bg-rose-50 dark:bg-rose-900/20'
+                  : 'bg-amber-50 dark:bg-amber-900/20'
+              }`}>
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className={`h-3.5 w-3.5 ${
+                    outcomeUpdate.verificationStatus === 'Needs Update' ? 'text-rose-500' : 'text-amber-500'
+                  }`} />
+                  <span className={`text-xs font-medium ${
+                    outcomeUpdate.verificationStatus === 'Needs Update' ? 'text-rose-700 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300'
+                  }`}>Verifier notes{outcomeUpdate.reviewedAt ? ` — ${outcomeUpdate.reviewedAt}` : ''}</span>
+                </div>
+                <p className={`mt-1 text-sm ${
+                  outcomeUpdate.verificationStatus === 'Needs Update' ? 'text-rose-700 dark:text-rose-300' : 'text-amber-700 dark:text-amber-300'
+                }`}>{outcomeUpdate.verifierNotes}</p>
               </div>
             )}
 
