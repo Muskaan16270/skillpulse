@@ -353,7 +353,7 @@ export function IdentityVerification({
               </button>
             )}
 
-            {(phoneStatus === 'otp_sent' || phoneStatus === 'verifying' || phoneStatus === 'error') && (
+            {phoneStatus !== 'idle' && phoneStatus !== 'sending_otp' && (
               <div className="animate-fade-in space-y-3">
                 <div className="rounded-lg bg-brand-50 px-4 py-2 dark:bg-brand-900/20">
                   <p className="text-xs text-brand-600 dark:text-brand-400">

@@ -5,15 +5,17 @@ import {
   Building2, Clock, Filter,
 } from 'lucide-react';
 import { Card, SectionTitle, Badge, ProgressBar } from '@/components/ui';
-import { trainees, jobListings, calculateJobMatch, type JobMatchResult } from '@/data/mockData';
+import { trainees, jobListings, calculateJobMatch, calculateJobMatchFromSkills, type JobMatchResult } from '@/data/mockData';
 
 interface JobMatchingModalProps {
   open: boolean;
   onClose: () => void;
   traineeId: string;
+  unifiedSkills?: string[];
+  unifiedProfileName?: string;
 }
 
-export function JobMatchingModal({ open, onClose, traineeId }: JobMatchingModalProps) {
+export function JobMatchingModal({ open, onClose, traineeId, unifiedSkills, unifiedProfileName }: JobMatchingModalProps) {
   const [sortBy, setSortBy] = useState<'match' | 'salary' | 'location'>('match');
   const [locationFilter, setLocationFilter] = useState<string>('All');
 
@@ -22,10 +24,13 @@ export function JobMatchingModal({ open, onClose, traineeId }: JobMatchingModalP
     [traineeId]
   );
 
+  const useUnified = unifiedSkills !== undefined && unifiedSkills.length > 0;
+
   const allMatches = useMemo(() => {
-    return jobListings
-      .map((job) => calculateJobMatch(traineeId, job))
-      .sort((a, b) => {
+    const matches = useUnified
+      ? jobListings.map((job) => calculateJobMatchFromSkills(unifiedSkills!, job))
+      : jobListings.map((job) => calculateJobMatch(traineeId, job));
+    return matches.sort((a, b) => {
         if (sortBy === 'match') return b.matchPercentage - a.matchPercentage;
         if (sortBy === 'salary') {
           const aMax = parseInt(a.job.salaryRange.replace(/[^0-9]/g, '').slice(-5));
@@ -34,7 +39,7 @@ export function JobMatchingModal({ open, onClose, traineeId }: JobMatchingModalP
         }
         return a.job.location.localeCompare(b.job.location);
       });
-  }, [traineeId, sortBy]);
+  }, [traineeId, sortBy, useUnified, unifiedSkills]);
 
   const locations = useMemo(() => {
     const locs = new Set(jobListings.map((j) => j.location));
@@ -66,7 +71,7 @@ export function JobMatchingModal({ open, onClose, traineeId }: JobMatchingModalP
                 <Badge color="amber" size="sm">DEMO</Badge>
               </div>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Showing matching jobs for <span className="font-medium text-gray-700 dark:text-gray-300">{trainee.name}</span> based on skills, qualification, training, and location
+                Showing matching jobs for <span className="font-medium text-gray-700 dark:text-gray-300">{useUnified ? (unifiedProfileName || 'Unified Profile') : trainee.name}</span> based on {useUnified ? 'unified profile skills' : 'skills, qualification, training, and location'}
               </p>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -81,33 +86,33 @@ export function JobMatchingModal({ open, onClose, traineeId }: JobMatchingModalP
                 <Award className="h-4 w-4 text-brand-500" />
                 <div>
                   <p className="text-xs text-gray-400">Skills</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{trainee.skills.length} skills</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{(useUnified ? unifiedSkills! : trainee.skills).length} skills</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <GraduationCap className="h-4 w-4 text-brand-500" />
                 <div>
                   <p className="text-xs text-gray-400">Qualification</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{trainee.education}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{useUnified ? 'Unified Profile' : trainee.education}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-brand-500" />
                 <div>
-                  <p className="text-xs text-gray-400">Training</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{trainee.courseName}</p>
+                  <p className="text-xs text-gray-400">{useUnified ? 'Source' : 'Training'}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{useUnified ? 'Verified Identity' : trainee.courseName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-brand-500" />
                 <div>
                   <p className="text-xs text-gray-400">Location</p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{trainee.district}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{useUnified ? 'All' : trainee.district}</p>
                 </div>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {trainee.skills.map((skill) => (
+              {(useUnified ? unifiedSkills! : trainee.skills).map((skill) => (
                 <span key={skill} className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
                   <CheckCircle2 className="h-3 w-3" /> {skill}
                 </span>

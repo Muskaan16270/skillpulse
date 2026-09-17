@@ -85,12 +85,134 @@ function analyzeSkillGap(traineeId: string, jobProfile: TargetJobProfile): Skill
   };
 }
 
+function analyzeUnifiedSkillGap(skills: string[], jobProfile: TargetJobProfile): SkillGapAnalysisResult {
+  const proficiency = getTraineeSkillProficiency(skills);
+
+  const matching: SkillGapAnalysisResult['matchingSkills'] = [];
+  const missing: SkillGapAnalysisResult['missingSkills'] = [];
+  const improvement: SkillGapAnalysisResult['improvementSkills'] = [];
+
+  for (const req of jobProfile.requiredSkills) {
+    const prof = proficiency[req.skill];
+    if (prof === undefined) {
+      missing.push({
+        skill: req.skill,
+        importance: req.importance,
+        demandLevel: req.demandLevel,
+        recommendation: trainingRecommendations[req.skill],
+      });
+    } else {
+      matching.push({
+        skill: req.skill,
+        proficiency: prof,
+        importance: req.importance,
+        demandLevel: req.demandLevel,
+      });
+      if (prof < 70) {
+        improvement.push({
+          skill: req.skill,
+          proficiency: prof,
+          targetLevel: 80,
+          importance: req.importance,
+        });
+      }
+    }
+  }
+
+  const totalRequired = jobProfile.requiredSkills.length;
+  const matchPercentage = Math.round((matching.length / totalRequired) * 100);
+  const recommendations = missing
+    .map((m) => m.recommendation)
+    .filter((r): r is NonNullable<typeof r> => r !== undefined);
+
+  return {
+    jobProfile,
+    matchingSkills: matching.sort((a, b) => b.demandLevel - a.demandLevel),
+    missingSkills: missing.sort((a, b) => {
+      const order = { Critical: 0, Important: 1, Preferred: 2 };
+      return order[a.importance as keyof typeof order] - order[b.importance as keyof typeof order];
+    }),
+    improvementSkills: improvement.sort((a, b) => b.proficiency - a.proficiency),
+    matchPercentage,
+    recommendations,
+  };
+}
+
+type AnalysisMode = 'demo' | 'unified';
+
 export function SkillGapAI() {
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('demo');
   const [selectedTraineeId, setSelectedTraineeId] = useState(trainees[0].id);
   const [selectedJobId, setSelectedJobId] = useState(targetJobProfiles[0].id);
   const [analysis, setAnalysis] = useState<SkillGapAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showJobs, setShowJobs] = useState(false);
+
+  // Unified profile state
+  const [unifiedIdentities, setUnifiedIdentities] = useState<VerifiedIdentity[]>([]);
+  const [selectedIdentityId, setSelectedIdentityId] = useState<string>('');
+  const [unifiedProfiles, setUnifiedProfiles] = useState<UnifiedProfile[]>([]);
+  const [unifiedLoading, setUnifiedLoading] = useState(false);
+  const [unifiedError, setUnifiedError] = useState('');
+
+  const selectedIdentity = useMemo(
+    () => unifiedIdentities.find((i) => i.id === selectedIdentityId) || null,
+    [unifiedIdentities, selectedIdentityId]
+  );
+
+  const mergedUnified = useMemo(() => {
+    const active = unifiedProfiles.filter((p) => p.status === 'active');
+    return active.length > 0 ? mergeProfileData(active) : null;
+  }, [unifiedProfiles]);
+
+  const loadIdentities = useCallback(async () => {
+    setUnifiedLoading(true);
+    setUnifiedError('');
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('verified_identities')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      const fetched = (data || []) as VerifiedIdentity[];
+      setUnifiedIdentities(fetched);
+      if (fetched.length > 0 && !selectedIdentityId) {
+        setSelectedIdentityId(fetched[0].id);
+      }
+    } catch {
+      setUnifiedError('Could not load verified profiles.');
+    } finally {
+      setUnifiedLoading(false);
+    }
+  }, [selectedIdentityId]);
+
+  useEffect(() => {
+    if (analysisMode === 'unified') {
+      loadIdentities();
+    }
+  }, [analysisMode, loadIdentities]);
+
+  useEffect(() => {
+    if (!selectedIdentityId) {
+      setUnifiedProfiles([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('unified_profiles')
+          .select('*')
+          .eq('identity_id', selectedIdentityId)
+          .order('created_at', { ascending: true });
+        if (fetchError) throw fetchError;
+        if (!cancelled) setUnifiedProfiles((data || []) as UnifiedProfile[]);
+      } catch {
+        if (!cancelled) setUnifiedError('Could not load profiles.');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedIdentityId]);
 
   const selectedTrainee = useMemo(
     () => trainees.find((t) => t.id === selectedTraineeId) || trainees[0],
@@ -105,21 +227,36 @@ export function SkillGapAI() {
     setIsAnalyzing(true);
     setAnalysis(null);
     setTimeout(() => {
-      const result = analyzeSkillGap(selectedTraineeId, selectedJob);
-      setAnalysis(result);
+      if (analysisMode === 'unified' && mergedUnified) {
+        const result = analyzeUnifiedSkillGap(mergedUnified.skills, selectedJob);
+        setAnalysis(result);
+      } else {
+        const result = analyzeSkillGap(selectedTraineeId, selectedJob);
+        setAnalysis(result);
+      }
       setIsAnalyzing(false);
     }, 900);
   };
 
+  const canAnalyze = analysisMode === 'demo' || (analysisMode === 'unified' && mergedUnified !== null);
+
+  const jobMatchTraineeId = selectedTraineeId;
+
   const radarAnalysisData = useMemo(() => {
     if (!analysis) return [];
-    const prof = getTraineeSkillProficiency(selectedTrainee.skills);
+    const skills = analysisMode === 'unified' && mergedUnified ? mergedUnified.skills : selectedTrainee.skills;
+    const prof = getTraineeSkillProficiency(skills);
     return analysis.jobProfile.requiredSkills.map((req) => ({
       skill: req.skill.length > 12 ? req.skill.slice(0, 10) + '…' : req.skill,
       'Your Level': prof[req.skill] || 0,
       'Required': req.demandLevel,
     }));
-  }, [analysis, selectedTrainee]);
+  }, [analysis, selectedTrainee, analysisMode, mergedUnified]);
+
+  const displaySkills = analysisMode === 'unified' && mergedUnified ? mergedUnified.skills : selectedTrainee.skills;
+  const displayName = analysisMode === 'unified' && selectedIdentity
+    ? selectedIdentity.full_name
+    : selectedTrainee.name;
 
   return (
     <div className="space-y-6">
@@ -135,7 +272,7 @@ export function SkillGapAI() {
         <span className="text-xs text-gray-400">Job demand data is simulated for prototype</span>
       </div>
 
-      {/* ========== NEW: Per-Trainee Skill Gap Analysis ========== */}
+      {/* ========== Per-Trainee Skill Gap Analysis ========== */}
       <Card className="border-l-4 border-l-brand-400 p-5">
         <SectionTitle
           title="Trainee Skill Gap Analysis"
@@ -143,20 +280,70 @@ export function SkillGapAI() {
           icon={<Target className="h-5 w-5" />}
         />
 
+        {/* Mode toggle */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => { setAnalysisMode('demo'); setAnalysis(null); }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              analysisMode === 'demo'
+                ? 'bg-brand-600 text-white'
+                : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Target className="h-4 w-4" /> Demo Trainees
+          </button>
+          <button
+            onClick={() => { setAnalysisMode('unified'); setAnalysis(null); }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              analysisMode === 'unified'
+                ? 'bg-brand-600 text-white'
+                : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Fingerprint className="h-4 w-4" /> Verified Unified Profile
+          </button>
+        </div>
+
         {/* Selectors */}
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Trainee</label>
-            <select
-              value={selectedTraineeId}
-              onChange={(e) => { setSelectedTraineeId(e.target.value); setAnalysis(null); }}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-brand-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-            >
-              {trainees.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} — {t.courseName}</option>
-              ))}
-            </select>
-          </div>
+          {analysisMode === 'demo' ? (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Trainee</label>
+              <select
+                value={selectedTraineeId}
+                onChange={(e) => { setSelectedTraineeId(e.target.value); setAnalysis(null); }}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-brand-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              >
+                {trainees.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} — {t.courseName}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Select Verified Profile</label>
+              {unifiedLoading ? (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading verified profiles…
+                </div>
+              ) : unifiedIdentities.length === 0 ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                  No verified profiles yet. Complete identity verification first.
+                </div>
+              ) : (
+                <select
+                  value={selectedIdentityId}
+                  onChange={(e) => { setSelectedIdentityId(e.target.value); setAnalysis(null); }}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-brand-400 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                >
+                  {unifiedIdentities.map((i) => (
+                    <option key={i.id} value={i.id}>{i.full_name} — {i.skillpulse_id}</option>
+                  ))}
+                </select>
+              )}
+              {unifiedError && <p className="mt-1 text-xs text-rose-500">{unifiedError}</p>}
+            </div>
+          )}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Target Job Role</label>
             <select
@@ -171,18 +358,24 @@ export function SkillGapAI() {
           </div>
         </div>
 
-        {/* Trainee skills summary */}
+        {/* Skills summary */}
         <div className="mt-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800/50">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-brand-500" />
-            <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedTrainee.name}'s Current Skills</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{displayName}'s Current Skills</span>
+            {analysisMode === 'unified' && mergedUnified && (
+              <Badge color="brand" size="sm">Unified · {mergedUnified.skills.length} skills</Badge>
+            )}
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {selectedTrainee.skills.map((skill) => (
+            {displaySkills.map((skill) => (
               <span key={skill} className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
                 <CheckCircle2 className="h-3 w-3" /> {skill}
               </span>
             ))}
+            {displaySkills.length === 0 && (
+              <span className="text-xs text-gray-400">No skills found. {analysisMode === 'unified' ? 'Create a profile in Identity &amp; Profiles first.' : ''}</span>
+            )}
           </div>
         </div>
 
@@ -216,7 +409,7 @@ export function SkillGapAI() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleAnalyze}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || !canAnalyze}
               className="flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
             >
               {isAnalyzing ? (
@@ -427,7 +620,9 @@ export function SkillGapAI() {
       <JobMatchingModal
         open={showJobs}
         onClose={() => setShowJobs(false)}
-        traineeId={selectedTraineeId}
+        traineeId={jobMatchTraineeId}
+        unifiedSkills={analysisMode === 'unified' && mergedUnified ? mergedUnified.skills : undefined}
+        unifiedProfileName={analysisMode === 'unified' ? selectedIdentity?.full_name : undefined}
       />
 
       {/* Divider */}

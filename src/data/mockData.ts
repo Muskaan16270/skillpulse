@@ -1231,6 +1231,53 @@ export function calculateJobMatch(
   };
 }
 
+export function calculateJobMatchFromSkills(
+  skills: string[],
+  job: JobListing
+): JobMatchResult {
+  const proficiency = getTraineeSkillProficiency(skills);
+
+  const matching: JobMatchResult['matchingSkills'] = [];
+  const missing: JobMatchResult['missingSkills'] = [];
+
+  for (const req of job.requiredSkills) {
+    const prof = proficiency[req.skill];
+    if (prof !== undefined) {
+      matching.push({ skill: req.skill, proficiency: prof, importance: req.importance });
+    } else {
+      missing.push({ skill: req.skill, importance: req.importance, demandLevel: req.demandLevel });
+    }
+  }
+
+  const weightMap = { Critical: 3, Important: 2, Preferred: 1 };
+  let totalWeight = 0;
+  let matchedWeight = 0;
+  for (const req of job.requiredSkills) {
+    const w = weightMap[req.importance];
+    totalWeight += w;
+    if (proficiency[req.skill] !== undefined) {
+      matchedWeight += w;
+    }
+  }
+  const matchPercentage = totalWeight > 0 ? Math.round((matchedWeight / totalWeight) * 100) : 0;
+
+  return {
+    job,
+    matchingSkills: matching.sort((a, b) => {
+      const order = { Critical: 0, Important: 1, Preferred: 2 };
+      return order[a.importance as keyof typeof order] - order[b.importance as keyof typeof order];
+    }),
+    missingSkills: missing.sort((a, b) => {
+      const order = { Critical: 0, Important: 1, Preferred: 2 };
+      return order[a.importance as keyof typeof order] - order[b.importance as keyof typeof order];
+    }),
+    matchPercentage,
+    locationMatch: true,
+    qualificationMatch: true,
+    trainingMatch: true,
+  };
+}
+
 // ---------- Providers ----------
 export const providers: Provider[] = [
   {
