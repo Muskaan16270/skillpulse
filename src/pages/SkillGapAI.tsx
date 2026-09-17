@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   BrainCircuit, AlertTriangle, TrendingUp, Lightbulb,
   CheckCircle2, XCircle, Sparkles, BookOpen, Info,
   Target, Zap, ChevronRight, Award, Clock, Briefcase,
+  Fingerprint, Loader2,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -12,6 +13,8 @@ import {
 import { Card, SectionTitle, Badge, ProgressBar } from '@/components/ui';
 import { skillGapData, skillsVsDemand, trainees, targetJobProfiles, getTraineeSkillProficiency, trainingRecommendations, type TargetJobProfile } from '@/data/mockData';
 import { JobMatchingModal } from '@/pages/admin/JobMatchingModal';
+import { supabase } from '@/lib/supabase';
+import { type VerifiedIdentity, type UnifiedProfile, mergeProfileData } from '@/lib/identity';
 
 const radarData = skillsVsDemand.map((s) => ({
   skill: s.skill,
