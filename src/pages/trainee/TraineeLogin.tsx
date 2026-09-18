@@ -3,9 +3,10 @@ import { Activity, LogIn, User, Lock, AlertTriangle, ArrowRight } from 'lucide-r
 
 interface TraineeLoginProps {
   onLogin: (traineeId: string) => void;
+  onBackToAdmin?: () => void;
 }
 
-export function TraineeLogin({ onLogin }: TraineeLoginProps) {
+export function TraineeLogin({ onLogin, onBackToAdmin }: TraineeLoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,7 +23,6 @@ export function TraineeLogin({ onLogin }: TraineeLoginProps) {
   const handleDemoLogin = () => {
     onLogin('T001');
   };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-brand-50 to-accent-50 dark:from-gray-950 dark:via-gray-900 dark:to-brand-900/20 p-4">
       <div className="w-full max-w-md space-y-6">
@@ -112,6 +112,16 @@ export function TraineeLogin({ onLogin }: TraineeLoginProps) {
         <p className="text-center text-xs text-gray-400">
           SkillPulse Trainee Portal — Prototype for SIH demonstration
         </p>
+        {onBackToAdmin && (
+          <div className="text-center">
+            <button
+              onClick={onBackToAdmin}
+              className="text-xs font-medium text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              ← Back to Admin Dashboard
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

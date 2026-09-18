@@ -55,7 +55,7 @@ export function FollowUps() {
 
   const handleSimulate = (key: string, method: FollowUpMethod, traineeName: string) => {
     const ts = new Date().toLocaleString('en-IN');
-    setSimulatedSends((prev) => ({ ...prev, [key]: `${method} sent to ${traineeName} at ${ts} (SIMULATED)` }));
+    setSimulatedActions((prev) => ({ ...prev, [key]: `${method} sent to ${traineeName} at ${ts} (SIMULATED)` }));
   };
 
   return (

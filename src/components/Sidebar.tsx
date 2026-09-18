@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Target, Stethoscope, BrainCircuit,
   TrendingUp, AlertTriangle, Wrench, GraduationCap, Building2,
   MapPin, BadgeCheck, ShieldCheck, Menu, X, Moon, Sun, Activity,
-  ClipboardList, Send, Fingerprint,
+  ClipboardList, Send, Fingerprint, LogIn,
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import type { ReactNode } from 'react';
@@ -41,9 +41,10 @@ const navItems: NavItem[] = [
 interface SidebarProps {
   currentPage: PageKey;
   onNavigate: (page: PageKey) => void;
+  onTraineeLogin?: () => void;
 }
 
-export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, onTraineeLogin }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
@@ -94,6 +95,19 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
       </div>
+
+      {/* Trainee portal login */}
+      {onTraineeLogin && (
+        <div className="border-t border-gray-200 px-3 py-3 dark:border-gray-800">
+          <button
+            onClick={onTraineeLogin}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-brand-600 transition hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20"
+          >
+            <LogIn className="h-5 w-5" />
+            <span>Trainee Portal</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 

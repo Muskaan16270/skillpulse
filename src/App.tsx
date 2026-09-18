@@ -52,7 +52,7 @@ function App() {
     if (!traineeId) {
       return (
         <ThemeProvider>
-          <TraineeLogin onLogin={handleTraineeLogin} />
+          <TraineeLogin onLogin={handleTraineeLogin} onBackToAdmin={() => setMode('admin')} />
         </ThemeProvider>
       );
     }
@@ -119,7 +119,7 @@ function App() {
   return (
     <ThemeProvider>
       <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
+        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} onTraineeLogin={() => { setTraineeId(null); setMode('trainee'); }} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <DemoBanner />
           <main className="flex-1 overflow-y-auto p-4 pt-16 lg:p-6 lg:pt-6">
